@@ -1,0 +1,3452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FPV Trick Trainer</title>
+<!-- Google Analytics - Replace GA_MEASUREMENT_ID with your GA4 ID (e.g. G-XXXXXXXXXX) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'GA_MEASUREMENT_ID');
+</script>
+<style>
+:root {
+  --bg-primary: #0f1117;
+  --bg-secondary: #1a1d27;
+  --bg-tertiary: #242836;
+  --text-primary: #e8eaf0;
+  --text-secondary: #9ca3b4;
+  --accent: #6c5ce7;
+  --accent-glow: rgba(108, 92, 231, 0.3);
+  --green: #00e676;
+  --yellow: #ffd600;
+  --red: #ff5252;
+  --orange: #ff9100;
+  --blue: #448aff;
+  --sidebar-width: 340px;
+  --header-height: 56px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Header */
+.header {
+  height: var(--header-height);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 10;
+}
+
+.header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), #a29bfe);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gamepad-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.gamepad-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--red);
+  transition: background 0.3s;
+}
+
+.gamepad-dot.connected {
+  background: var(--green);
+  box-shadow: 0 0 8px rgba(0, 230, 118, 0.5);
+}
+
+/* Layout */
+.app-layout {
+  display: flex;
+  height: calc(100vh - var(--header-height));
+}
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--bg-tertiary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-filters {
+  padding: 12px;
+  border-bottom: 1px solid var(--bg-tertiary);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  border-color: var(--accent);
+}
+
+.difficulty-filters {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.diff-btn {
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--bg-tertiary);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.diff-btn:hover { border-color: var(--text-secondary); }
+.diff-btn.active { border-color: var(--accent); color: var(--text-primary); background: var(--accent-glow); }
+
+.trick-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.trick-list::-webkit-scrollbar { width: 6px; }
+.trick-list::-webkit-scrollbar-track { background: transparent; }
+.trick-list::-webkit-scrollbar-thumb { background: var(--bg-tertiary); border-radius: 3px; }
+
+.category-group { margin-bottom: 12px; }
+
+.category-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  padding: 6px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.category-progress {
+  width: 40px;
+  height: 4px;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.category-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.trick-item {
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s;
+  font-size: 13px;
+}
+
+.trick-item:hover { background: var(--bg-tertiary); }
+.trick-item.selected { background: var(--accent-glow); border: 1px solid var(--accent); }
+
+.trick-item .diff-badge {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.diff-beginner { background: var(--green); }
+.diff-novice { background: var(--blue); }
+.diff-intermediate { background: var(--yellow); }
+.diff-advanced { background: var(--orange); }
+.diff-master { background: var(--red); }
+
+.trick-item .trick-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.trick-item .trick-status {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.status-learning { background: rgba(68, 138, 255, 0.2); color: var(--blue); }
+.status-practiced { background: rgba(255, 214, 0, 0.2); color: var(--yellow); }
+.status-mastered { background: rgba(0, 230, 118, 0.2); color: var(--green); }
+
+/* Main content */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.trick-detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.trick-detail.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.empty-state h2 { font-size: 20px; margin-bottom: 8px; color: var(--text-primary); }
+.empty-state p { font-size: 14px; }
+
+/* Trick header */
+.trick-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.trick-header-left h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.trick-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.trick-diff-label {
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.trick-description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 20px;
+  max-width: 700px;
+}
+
+.progress-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.progress-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--bg-tertiary);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.progress-btn:hover { border-color: var(--text-secondary); }
+.progress-btn.active-learning { border-color: var(--blue); color: var(--blue); background: rgba(68, 138, 255, 0.1); }
+.progress-btn.active-practiced { border-color: var(--yellow); color: var(--yellow); background: rgba(255, 214, 0, 0.1); }
+.progress-btn.active-mastered { border-color: var(--green); color: var(--green); background: rgba(0, 230, 118, 0.1); }
+
+/* Visualizer area */
+.visualizer-area {
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+  align-items: center;
+  margin: 10px 0 20px;
+  flex-wrap: wrap;
+}
+
+.stick-container {
+  text-align: center;
+}
+
+.stick-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stick-sublabel {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  opacity: 0.7;
+}
+
+canvas.stick-canvas {
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-tertiary);
+}
+
+/* Accuracy display */
+.accuracy-display {
+  text-align: center;
+  padding: 10px 20px;
+}
+
+.accuracy-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.accuracy-value {
+  font-size: 48px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.3s;
+}
+
+.best-score {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* 3D Quad visualizer */
+.quad3d-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+canvas.quad3d-canvas {
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-tertiary);
+  cursor: grab;
+}
+
+/* Blender-style 3D viewport toolbar */
+.viewport-toolbar {
+  position: absolute;
+  right: calc(50% - 240px + 8px);
+  top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 2;
+}
+
+.vp-btn {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(30,33,44,0.85);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  backdrop-filter: blur(4px);
+  transition: background 0.15s, color 0.15s;
+}
+
+.vp-btn:hover {
+  background: rgba(50,54,68,0.95);
+  color: var(--text-primary);
+}
+
+.vp-btn.active {
+  background: rgba(108,92,231,0.35);
+  color: #a29bfe;
+}
+
+.vp-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.vp-sep {
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+  margin: 2px 0;
+}
+
+/* Zoom strip on the right edge */
+.viewport-zoom {
+  position: absolute;
+  right: calc(50% - 240px + 8px);
+  bottom: 42px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 2;
+}
+
+/* Axis gizmo area - bottom-left of canvas */
+.viewport-gizmo {
+  position: absolute;
+  left: calc(50% - 240px + 6px);
+  bottom: 10px;
+  width: 56px;
+  height: 56px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Quick calibration bar */
+.quick-cal-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 12px;
+  flex-wrap: wrap;
+}
+
+.quick-cal-bar .qcal-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.quick-cal-bar .qcal-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-tertiary);
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.quick-cal-bar .qcal-toggle:hover {
+  border-color: var(--accent);
+}
+
+.quick-cal-bar .qcal-toggle.active {
+  background: rgba(68, 138, 255, 0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.quick-cal-bar .qcal-toggle input {
+  display: none;
+}
+
+.quick-cal-bar .qcal-more {
+  font-size: 10px;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  opacity: 0.7;
+  background: none;
+  border: none;
+  padding: 3px 6px;
+}
+
+.quick-cal-bar .qcal-more:hover { opacity: 1; }
+
+/* Playback controls */
+.playback-area {
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-top: auto;
+}
+
+.timeline-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  margin-bottom: 14px;
+  cursor: pointer;
+  position: relative;
+}
+
+.timeline-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.05s linear;
+}
+
+.timeline-keyframes {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.timeline-keyframe {
+  position: absolute;
+  top: -3px;
+  width: 4px;
+  height: 12px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 2px;
+  transform: translateX(-50%);
+}
+
+.controls-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ctrl-btn {
+  background: var(--bg-tertiary);
+  border: none;
+  color: var(--text-primary);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  font-size: 16px;
+}
+
+.ctrl-btn:hover { background: var(--accent-glow); }
+.ctrl-btn.playing { background: var(--accent); }
+
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.speed-slider {
+  width: 100px;
+  accent-color: var(--accent);
+}
+
+.speed-value {
+  width: 35px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.time-display {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 80px;
+}
+
+/* Settings dropdown */
+.settings-wrap {
+  position: relative;
+}
+
+.settings-btn {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--bg-tertiary);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 4px;
+  line-height: 1;
+}
+
+.settings-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+
+.settings-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-tertiary);
+  border-radius: 10px;
+  padding: 14px 16px;
+  min-width: 230px;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.settings-panel.open { display: block; }
+
+.settings-panel h4 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 0;
+}
+
+.setting-row + .setting-row { border-top: 1px solid rgba(255,255,255,0.04); }
+
+.setting-label {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.setting-desc {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  width: 38px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-tertiary);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle input:checked + .toggle-track {
+  background: var(--accent);
+}
+
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: var(--text-primary);
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle input:checked + .toggle-track::after {
+  transform: translateX(18px);
+}
+
+/* Calibration modal */
+.cal-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--bg-tertiary);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 8px;
+}
+
+.cal-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+
+.cal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+
+.cal-overlay.open { display: flex; }
+
+.cal-modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-tertiary);
+  border-radius: 12px;
+  padding: 24px;
+  width: 520px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.cal-modal h3 {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.cal-modal .cal-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 18px;
+}
+
+.cal-axes-live {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.cal-axis-live {
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  padding: 8px;
+  text-align: center;
+}
+
+.cal-axis-live .cal-axis-idx {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cal-axis-live .cal-axis-val {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.cal-mapping-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.cal-mapping-row:last-child { border-bottom: none; }
+
+.cal-fn-name {
+  width: 80px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cal-fn-name small {
+  display: block;
+  font-weight: 400;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.cal-select {
+  background: var(--bg-tertiary);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-primary);
+  padding: 6px 10px;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  flex: 1;
+}
+
+.cal-select:focus { border-color: var(--accent); }
+
+.cal-invert {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cal-invert input { accent-color: var(--accent); }
+
+.cal-deadzone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.cal-deadzone input[type=range] {
+  width: 120px;
+  accent-color: var(--accent);
+}
+
+.cal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+  justify-content: flex-end;
+}
+
+.cal-actions button {
+  padding: 8px 18px;
+  border-radius: 6px;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cal-save-btn {
+  background: var(--accent);
+  color: white;
+}
+
+.cal-save-btn:hover { opacity: 0.9; }
+
+.cal-reset-btn {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.cal-reset-btn:hover { color: var(--text-primary); }
+
+/* Responsive */
+@media (max-width: 800px) {
+  .sidebar { width: 260px; min-width: 260px; }
+  .visualizer-area { gap: 16px; }
+}
+
+@media (max-width: 600px) {
+  /* Header */
+  .header { height: 36px; padding: 0 8px; }
+  .header h1 { font-size: 13px; }
+  .gamepad-status { font-size: 10px; gap: 4px; }
+  .cal-btn { font-size: 10px; padding: 2px 6px; }
+  .settings-wrap { display: none; }
+
+  /* Layout */
+  .app-layout { flex-direction: column; height: calc(100vh - 36px); height: calc(100dvh - 36px); }
+  .sidebar { width: 100%; min-width: unset; height: 110px; border-right: none; border-bottom: 1px solid var(--bg-tertiary); flex-shrink: 0; }
+  .sidebar-filters { padding: 4px 6px; gap: 2px; }
+  .sidebar-filters .search-box { display: none; }
+  .diff-filter-row { flex-wrap: wrap; gap: 3px; }
+  .diff-filter-row button { font-size: 11px; padding: 2px 8px; }
+  .main-content { flex: 1; min-height: 0; overflow: hidden; }
+
+  /* Trick detail */
+  .trick-detail { padding: 4px 8px; overflow: hidden; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
+  .trick-header { flex-direction: row; gap: 6px; margin-bottom: 0; flex-shrink: 0; }
+  .trick-header-left h2 { font-size: 14px; margin-bottom: 0; }
+  .trick-meta { font-size: 10px; gap: 4px; }
+  .mastery-btns, .progress-btns { display: none; }
+  .trick-description { display: none; }
+
+  /* Canvas - cap the height */
+  .quad3d-container { flex: 1; min-height: 0; max-height: 35vh; margin-bottom: 2px; }
+  .quad3d-canvas { width: 100% !important; height: 100% !important; }
+  .viewport-toolbar, .viewport-zoom, .viewport-gizmo { display: none; }
+
+  /* Sticks */
+  .visualizer-area { gap: 20px; margin: 0; padding: 2px 0; flex-wrap: nowrap; justify-content: center; align-items: center; flex-shrink: 0; }
+  canvas.stick-canvas { width: 120px !important; height: 120px !important; }
+  .stick-label { display: none; }
+  .stick-sublabel { display: none; }
+  .stick-container { text-align: center; }
+  .accuracy-display { display: none; }
+  .best-score { display: none; }
+
+  /* Hidden elements */
+  .flip-display-row, .quick-cal-bar { display: none; }
+
+  /* Playback */
+  .playback-area { padding: 6px 10px; margin-top: 0 !important; flex-shrink: 0; border-radius: 6px; padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .timeline-bar { margin-bottom: 6px; }
+  .controls-row { gap: 6px; }
+  .ctrl-btn { width: 30px; height: 30px; font-size: 12px; }
+  .time-display { font-size: 11px; }
+  .speed-control { font-size: 10px; }
+  .speed-slider { width: 50px; }
+  .progress-status { font-size: 10px; }
+
+  /* Empty state */
+  .empty-state h2 { font-size: 16px; }
+  .empty-state p { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>FPV Trick Trainer</h1>
+  <div class="gamepad-status">
+    <div class="gamepad-dot" id="gamepadDot"></div>
+    <span id="gamepadText">No controller detected</span>
+    <button class="cal-btn" id="openCalBtn">Calibrate</button>
+    <div class="settings-wrap">
+      <button class="settings-btn" id="settingsBtn" title="Settings">&#9881;</button>
+      <div class="settings-panel" id="settingsPanel">
+        <h4>Settings</h4>
+        <div class="setting-row">
+          <div><div class="setting-label">Loop playback</div><div class="setting-desc">Restart trick automatically</div></div>
+          <label class="toggle"><input type="checkbox" data-setting="loop" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Show ghost quad</div><div class="setting-desc">Target pattern in 3D view</div></div>
+          <label class="toggle"><input type="checkbox" data-setting="showGhost" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Show sticks</div><div class="setting-desc">2D stick position visualizers</div></div>
+          <label class="toggle"><input type="checkbox" data-setting="showSticks" checked><span class="toggle-track"></span></label>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Auto-play on select</div><div class="setting-desc">Start playing when picking a trick</div></div>
+          <label class="toggle"><input type="checkbox" data-setting="autoPlay"><span class="toggle-track"></span></label>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Show accuracy</div><div class="setting-desc">Real-time accuracy readout</div></div>
+          <label class="toggle"><input type="checkbox" data-setting="showAccuracy" checked><span class="toggle-track"></span></label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="cal-overlay" id="calOverlay">
+  <div class="cal-modal">
+    <h3>Controller Calibration</h3>
+    <p class="cal-subtitle">Move your sticks to see live axis values, then assign each function to the correct axis.</p>
+    <div class="cal-axes-live" id="calAxesLive"></div>
+    <div id="calMappings"></div>
+    <div class="cal-deadzone">
+      <span>Deadzone:</span>
+      <input type="range" id="calDeadzone" min="0" max="0.3" step="0.01" value="0.05">
+      <span id="calDeadzoneVal">0.05</span>
+    </div>
+    <div class="cal-actions">
+      <button class="cal-reset-btn" id="calResetBtn">Reset to Defaults</button>
+      <button class="cal-save-btn" id="calSaveBtn">Save &amp; Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="app-layout">
+  <div class="sidebar">
+    <div class="sidebar-filters">
+      <input type="text" class="search-input" id="searchInput" placeholder="Search tricks...">
+      <div class="difficulty-filters" id="diffFilters">
+        <button class="diff-btn active" data-diff="all">All</button>
+        <button class="diff-btn" data-diff="Beginner">Beginner</button>
+        <button class="diff-btn" data-diff="Novice">Novice</button>
+        <button class="diff-btn" data-diff="Intermediate">Intermediate</button>
+        <button class="diff-btn" data-diff="Advanced">Advanced</button>
+        <button class="diff-btn" data-diff="Master">Master</button>
+      </div>
+    </div>
+    <div class="trick-list" id="trickList"></div>
+  </div>
+
+  <div class="main-content">
+    <div class="trick-detail empty" id="trickDetail">
+      <div class="empty-state">
+        <h2>Select a Trick</h2>
+        <p>Choose a trick from the sidebar to start practicing.<br>Connect a game controller for stick input tracking.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// TRICK DATABASE
+// ============================================================
+// Motion patterns: keyframes with { t (seconds), throttle, yaw, pitch, roll }
+// Values range from -1 to 1 (stick deflection)
+// throttle: -1=min, 1=max | yaw: -1=left, 1=right
+// pitch: -1=forward, 1=back | roll: -1=left, 1=right
+
+const TRICKS = [
+  // ---- ROLLS ----
+  { name: "Aileron Roll Right", category: "Rolls", difficulty: "Beginner",
+    description: "A full 360° roll to the right. Keep throttle steady and apply full right roll.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.4, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.8, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Aileron Roll Left", category: "Rolls", difficulty: "Beginner",
+    description: "A full 360° roll to the left. Mirror of the right aileron roll.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.4, yaw: 0, pitch: 0, roll: -1 },
+      { t: 0.8, throttle: 0.3, yaw: 0, pitch: 0, roll: -1 },
+      { t: 1.0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Double Roll Right", category: "Rolls", difficulty: "Novice",
+    description: "Two consecutive aileron rolls to the right. Maintain steady throttle throughout.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.15, throttle: 0.4, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.6, throttle: 0.4, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.75, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Double Roll Left", category: "Rolls", difficulty: "Novice",
+    description: "Two consecutive aileron rolls to the left.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.15, throttle: 0.4, yaw: 0, pitch: 0, roll: -1 },
+      { t: 1.6, throttle: 0.4, yaw: 0, pitch: 0, roll: -1 },
+      { t: 1.75, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Barrel Roll Right", category: "Rolls", difficulty: "Novice",
+    description: "A roll combined with a climbing arc. Mix pitch back with roll for a corkscrew motion.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.15, throttle: 0.6, yaw: 0, pitch: 0.4, roll: 1 },
+      { t: 0.75, throttle: 0.5, yaw: 0, pitch: 0.3, roll: 1 },
+      { t: 0.9, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Barrel Roll Left", category: "Rolls", difficulty: "Novice",
+    description: "A barrel roll to the left. Climbing arc with roll.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.15, throttle: 0.6, yaw: 0, pitch: 0.4, roll: -1 },
+      { t: 0.75, throttle: 0.5, yaw: 0, pitch: 0.3, roll: -1 },
+      { t: 0.9, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Snap Roll Right", category: "Rolls", difficulty: "Intermediate",
+    description: "A very fast aileron roll with a quick flick of the roll stick. Minimal throttle adjustment.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.05, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.7, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.75, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Knife Edge Roll", category: "Rolls", difficulty: "Advanced",
+    description: "Roll the quad 90° and hold it on its side while flying forward, using yaw to maintain altitude.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.4, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.2, throttle: 0.4, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.3, throttle: 0.4, yaw: 0.7, pitch: 0, roll: 0 },
+      { t: 1.2, throttle: 0.4, yaw: 0.7, pitch: 0, roll: 0 },
+      { t: 1.3, throttle: 0.3, yaw: 0, pitch: 0, roll: -1 },
+      { t: 1.4, throttle: 0.3, yaw: 0, pitch: 0, roll: -1 },
+      { t: 1.5, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+
+  // ---- FLIPS ----
+  { name: "Front Flip", category: "Flips", difficulty: "Beginner",
+    description: "A forward 360° flip. Bump throttle then push pitch full forward and hold through the rotation.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.15, throttle: 0.6, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.3, throttle: 0.2, yaw: 0, pitch: -1, roll: 0 },
+      { t: 0.95, throttle: 0.2, yaw: 0, pitch: -1, roll: 0 },
+      { t: 1.1, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Back Flip", category: "Flips", difficulty: "Beginner",
+    description: "A backward 360° flip. Bump throttle and pull pitch full back and hold through the rotation.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.15, throttle: 0.6, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.3, throttle: 0.2, yaw: 0, pitch: 1, roll: 0 },
+      { t: 0.95, throttle: 0.2, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.1, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Double Front Flip", category: "Flips", difficulty: "Intermediate",
+    description: "Two consecutive front flips (720°). Requires more altitude and sustained pitch input.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.7, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.35, throttle: 0.1, yaw: 0, pitch: -1, roll: 0 },
+      { t: 1.8, throttle: 0.1, yaw: 0, pitch: -1, roll: 0 },
+      { t: 1.95, throttle: 0.5, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Double Back Flip", category: "Flips", difficulty: "Intermediate",
+    description: "Two consecutive back flips (720°).",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.7, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.35, throttle: 0.1, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.8, throttle: 0.1, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.95, throttle: 0.5, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Side Flip Right", category: "Flips", difficulty: "Novice",
+    description: "A cartwheel flip to the right. Full roll input with a touch of pitch.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.15, throttle: 0.5, yaw: 0, pitch: 0.2, roll: 0 },
+      { t: 0.3, throttle: 0.2, yaw: 0, pitch: 0.2, roll: 1 },
+      { t: 0.95, throttle: 0.2, yaw: 0, pitch: 0.2, roll: 1 },
+      { t: 1.1, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Side Flip Left", category: "Flips", difficulty: "Novice",
+    description: "A cartwheel flip to the left.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.15, throttle: 0.5, yaw: 0, pitch: 0.2, roll: 0 },
+      { t: 0.3, throttle: 0.2, yaw: 0, pitch: 0.2, roll: -1 },
+      { t: 0.95, throttle: 0.2, yaw: 0, pitch: 0.2, roll: -1 },
+      { t: 1.1, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+
+  // ---- POWERLOOPS ----
+  { name: "Powerloop", category: "Powerloops", difficulty: "Intermediate", fwdSpeed: 10,
+    description: "Climb vertically with high throttle, pull pitch back through a full 360° backward loop. Cut throttle at the top, recover at the bottom.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.9, yaw: 0, pitch: 0.5, roll: 0 },
+      { t: 0.5, throttle: 0.9, yaw: 0, pitch: 1, roll: 0 },
+      { t: 0.8, throttle: 0.1, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.1, throttle: 0.1, yaw: 0, pitch: 0.7, roll: 0 },
+      { t: 1.3, throttle: 0.5, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Reverse Powerloop", category: "Powerloops", difficulty: "Advanced", fwdSpeed: 10,
+    description: "Climb vertically and flip forward over the top through a full 360° forward loop. Pitch forward at apex.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.9, yaw: 0, pitch: -0.5, roll: 0 },
+      { t: 0.5, throttle: 0.9, yaw: 0, pitch: -1, roll: 0 },
+      { t: 0.8, throttle: 0.1, yaw: 0, pitch: -1, roll: 0 },
+      { t: 1.1, throttle: 0.1, yaw: 0, pitch: -0.7, roll: 0 },
+      { t: 1.3, throttle: 0.5, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Split-S Powerloop", category: "Powerloops", difficulty: "Advanced", fwdSpeed: 10,
+    description: "Half roll (180°) to inverted near an object, then pull pitch back through a descending half loop around it.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.4, throttle: 0.2, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.5, throttle: 0.1, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.6, throttle: 0.1, yaw: 0, pitch: 1, roll: 0 },
+      { t: 0.9, throttle: 0.2, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.0, throttle: 0.4, yaw: 0, pitch: 0.3, roll: 0 },
+      { t: 1.3, throttle: 0.5, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Powerloop with Roll", category: "Powerloops", difficulty: "Advanced", fwdSpeed: 10,
+    description: "A full 360° backward powerloop with a 360° aileron roll added at the top of the loop.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.9, yaw: 0, pitch: 0.7, roll: 0 },
+      { t: 0.5, throttle: 0.8, yaw: 0, pitch: 0.5, roll: 0 },
+      { t: 0.6, throttle: 0.1, yaw: 0, pitch: 0.4, roll: 1 },
+      { t: 1.3, throttle: 0.1, yaw: 0, pitch: 0.4, roll: 1 },
+      { t: 1.4, throttle: 0.1, yaw: 0, pitch: 0.6, roll: 0 },
+      { t: 1.7, throttle: 0.5, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Inverted Powerloop", category: "Powerloops", difficulty: "Master", fwdSpeed: 10,
+    description: "Roll inverted (180°), fly inverted, then forward-flip powerloop while inverted, then roll back upright (180°).",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.4, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.5, throttle: -0.2, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.6, throttle: 0.8, yaw: 0, pitch: -1, roll: 0 },
+      { t: 1.3, throttle: 0.1, yaw: 0, pitch: -1, roll: 0 },
+      { t: 1.4, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.5, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.8, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.9, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Double Powerloop", category: "Powerloops", difficulty: "Master", fwdSpeed: 10,
+    description: "Two consecutive 360° backward loops without leveling out. Requires precise throttle and sustained energy.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.15, throttle: 1, yaw: 0, pitch: 1, roll: 0 },
+      { t: 0.6, throttle: 0.1, yaw: 0, pitch: 1, roll: 0 },
+      { t: 0.8, throttle: 0.7, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.25, throttle: 0.1, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.45, throttle: 0.7, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.6, throttle: 0.7, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.75, throttle: 0.5, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+
+  // ---- YAWSPINS ----
+  { name: "Yaw Spin Right", category: "Yaw Spins", difficulty: "Beginner",
+    description: "Flat 360° yaw rotation to the right. Keep throttle steady at hover.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.35, yaw: 1, pitch: 0, roll: 0 },
+      { t: 0.9, throttle: 0.35, yaw: 1, pitch: 0, roll: 0 },
+      { t: 1.1, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Yaw Spin Left", category: "Yaw Spins", difficulty: "Beginner",
+    description: "Flat 360° yaw rotation to the left.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.35, yaw: -1, pitch: 0, roll: 0 },
+      { t: 0.9, throttle: 0.35, yaw: -1, pitch: 0, roll: 0 },
+      { t: 1.1, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Pirouette Right", category: "Yaw Spins", difficulty: "Novice",
+    description: "Continuous yaw spin while climbing. Throttle up with sustained yaw.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.6, yaw: 1, pitch: 0, roll: 0 },
+      { t: 1.2, throttle: 0.7, yaw: 1, pitch: 0, roll: 0 },
+      { t: 1.5, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Pirouette Left", category: "Yaw Spins", difficulty: "Novice",
+    description: "Continuous yaw spin while climbing, to the left.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.6, yaw: -1, pitch: 0, roll: 0 },
+      { t: 1.2, throttle: 0.7, yaw: -1, pitch: 0, roll: 0 },
+      { t: 1.5, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Yaw Spin 720", category: "Yaw Spins", difficulty: "Intermediate",
+    description: "Two full yaw rotations. Requires sustained yaw input and stable throttle.",
+    motion: [
+      { t: 0, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.4, yaw: 1, pitch: 0, roll: 0 },
+      { t: 1.8, throttle: 0.4, yaw: 1, pitch: 0, roll: 0 },
+      { t: 2.0, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Inverted Yaw Spin", category: "Yaw Spins", difficulty: "Advanced",
+    description: "Yaw spin while flying inverted. Roll inverted (180°), yaw spin with negative throttle, then roll back upright (180°).",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.4, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.5, throttle: -0.1, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.7, throttle: -0.1, yaw: 1, pitch: 0, roll: 0 },
+      { t: 1.5, throttle: -0.1, yaw: 1, pitch: 0, roll: 0 },
+      { t: 1.6, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.9, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 2.0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+
+  // ---- COMBOS ----
+  { name: "Flip + Roll", category: "Combos", difficulty: "Intermediate",
+    description: "Back flip immediately followed by an aileron roll. Quick transitions between inputs.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.6, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.2, yaw: 0, pitch: 1, roll: 0 },
+      { t: 0.85, throttle: 0.2, yaw: 0, pitch: 1, roll: 0 },
+      { t: 0.95, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.05, throttle: 0.4, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.7, throttle: 0.4, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.8, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Roll + Flip", category: "Combos", difficulty: "Intermediate",
+    description: "Aileron roll followed by a back flip.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.4, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.75, throttle: 0.4, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.85, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.95, throttle: 0.5, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.6, throttle: 0.2, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.7, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Flippy Spin", category: "Combos", difficulty: "Intermediate",
+    description: "Simultaneous back flip and yaw spin. Combine pitch back with full yaw.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.6, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.4, throttle: 0.2, yaw: 1, pitch: 0.8, roll: 0 },
+      { t: 1.0, throttle: 0.2, yaw: 1, pitch: 0.8, roll: 0 },
+      { t: 1.2, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Rolly Spin", category: "Combos", difficulty: "Intermediate",
+    description: "Simultaneous roll and yaw spin. Creates a corkscrew-like rotation.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.4, yaw: 0.8, pitch: 0, roll: 1 },
+      { t: 1.0, throttle: 0.4, yaw: 0.8, pitch: 0, roll: 1 },
+      { t: 1.2, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Triple Combo", category: "Combos", difficulty: "Advanced",
+    description: "Roll, flip, then yaw spin in quick succession. Tests rapid input switching.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.5, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.75, throttle: 0.5, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.85, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.95, throttle: 0.3, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.6, throttle: 0.2, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.7, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.8, throttle: 0.4, yaw: 1, pitch: 0, roll: 0 },
+      { t: 2.45, throttle: 0.4, yaw: 1, pitch: 0, roll: 0 },
+      { t: 2.55, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Juicy Flick", category: "Combos", difficulty: "Advanced",
+    description: "Throttle blip + aggressive pitch forward to inverted (180°), then half roll to upright. Mix opposite yaw with the roll for clean camera axis.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.7, yaw: 0, pitch: -1, roll: 0 },
+      { t: 0.4, throttle: 0.2, yaw: 0, pitch: -1, roll: 0 },
+      { t: 0.5, throttle: 0.3, yaw: -0.5, pitch: 0, roll: 1 },
+      { t: 0.8, throttle: 0.3, yaw: -0.5, pitch: 0, roll: 1 },
+      { t: 0.9, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Rubik's Cube", category: "Combos", difficulty: "Master",
+    description: "Three sequential phases: half flip forward (180°), full roll (360°) while inverted, then second half flip forward (180°) to upright.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.2, yaw: 0, pitch: -1, roll: 0 },
+      { t: 0.4, throttle: 0.1, yaw: 0, pitch: -1, roll: 0 },
+      { t: 0.5, throttle: 0.1, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.2, throttle: 0.1, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.3, throttle: 0.1, yaw: 0, pitch: -1, roll: 0 },
+      { t: 1.6, throttle: 0.2, yaw: 0, pitch: -1, roll: 0 },
+      { t: 1.7, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+
+  // ---- DIVES ----
+  { name: "Power Dive", category: "Dives", difficulty: "Beginner", fwdSpeed: 3,
+    description: "Cut throttle and pitch forward to dive straight down, then recover with throttle.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0, yaw: 0, pitch: -0.8, roll: 0 },
+      { t: 0.8, throttle: 0, yaw: 0, pitch: -0.8, roll: 0 },
+      { t: 1.0, throttle: 0.7, yaw: 0, pitch: 0.3, roll: 0 },
+      { t: 1.3, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Dive + Pull Up", category: "Dives", difficulty: "Novice", fwdSpeed: 4,
+    description: "Steep dive followed by an aggressive pull-up to level flight.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0, yaw: 0, pitch: -1, roll: 0 },
+      { t: 0.7, throttle: 0, yaw: 0, pitch: -0.5, roll: 0 },
+      { t: 0.9, throttle: 0.9, yaw: 0, pitch: 0.6, roll: 0 },
+      { t: 1.3, throttle: 0.5, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Split-S", category: "Dives", difficulty: "Intermediate", fwdSpeed: 5,
+    description: "Half roll (180°) to inverted, then pull pitch back through a descending half loop (180°) to reverse direction at lower altitude.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.2, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.4, throttle: 0.2, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.5, throttle: 0.1, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.6, throttle: 0.1, yaw: 0, pitch: 1, roll: 0 },
+      { t: 0.9, throttle: 0.1, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.0, throttle: 0.3, yaw: 0, pitch: 0.3, roll: 0 },
+      { t: 1.3, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Immelmann Turn", category: "Dives", difficulty: "Intermediate", fwdSpeed: 5,
+    description: "Ascending half loop (180° pitch back) to inverted, then half roll (180°) to upright. Gains altitude, reverses direction.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.9, yaw: 0, pitch: 1, roll: 0 },
+      { t: 0.4, throttle: 0.8, yaw: 0, pitch: 1, roll: 0 },
+      { t: 0.5, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.6, throttle: 0.4, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.9, throttle: 0.4, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Dive Bomb Roll", category: "Dives", difficulty: "Advanced", fwdSpeed: 3,
+    description: "Dive straight down while rolling. Recovery with throttle and pitch.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0, yaw: 0, pitch: -0.9, roll: 0.8 },
+      { t: 0.8, throttle: 0, yaw: 0, pitch: -0.7, roll: 0.8 },
+      { t: 1.0, throttle: 0.8, yaw: 0, pitch: 0.5, roll: 0 },
+      { t: 1.4, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Inverted Dive", category: "Dives", difficulty: "Advanced", fwdSpeed: 4,
+    description: "Roll inverted (180°), dive with pitch back while inverted, then roll back upright (180°).",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.4, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.5, throttle: -0.2, yaw: 0, pitch: 0.7, roll: 0 },
+      { t: 1.0, throttle: -0.1, yaw: 0, pitch: 0.5, roll: 0 },
+      { t: 1.1, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.4, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.5, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+
+  // ---- ORBITS ----
+  { name: "Orbit Right", category: "Orbits", difficulty: "Novice", fwdSpeed: 10,
+    description: "Fly a circle around a point to the right. Coordinate yaw and roll to maintain orbit.",
+    motion: [
+      { t: 0, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.3, throttle: 0.4, yaw: 0.4, pitch: -0.2, roll: 0.3 },
+      { t: 2.5, throttle: 0.4, yaw: 0.4, pitch: -0.2, roll: 0.3 },
+      { t: 2.8, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Orbit Left", category: "Orbits", difficulty: "Novice", fwdSpeed: 10,
+    description: "Fly a circle around a point to the left.",
+    motion: [
+      { t: 0, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.3, throttle: 0.4, yaw: -0.4, pitch: -0.2, roll: -0.3 },
+      { t: 2.5, throttle: 0.4, yaw: -0.4, pitch: -0.2, roll: -0.3 },
+      { t: 2.8, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Tight Orbit", category: "Orbits", difficulty: "Intermediate", fwdSpeed: 8,
+    description: "A very tight radius orbit. More aggressive yaw and roll inputs.",
+    motion: [
+      { t: 0, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.3, throttle: 0.5, yaw: 0.7, pitch: -0.3, roll: 0.5 },
+      { t: 1.8, throttle: 0.5, yaw: 0.7, pitch: -0.3, roll: 0.5 },
+      { t: 2.1, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Banked Orbit", category: "Orbits", difficulty: "Intermediate", fwdSpeed: 10,
+    description: "Orbit with significant bank angle. More roll, less yaw.",
+    motion: [
+      { t: 0, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.3, throttle: 0.5, yaw: 0.2, pitch: -0.3, roll: 0.7 },
+      { t: 3.5, throttle: 0.5, yaw: 0.2, pitch: -0.3, roll: 0.7 },
+      { t: 3.8, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Inverted Orbit", category: "Orbits", difficulty: "Master", fwdSpeed: 8,
+    description: "Roll inverted (180°), orbit with yaw+pitch while inverted, then roll back upright (180°).",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.4, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.5, throttle: -0.1, yaw: 0.4, pitch: 0.3, roll: 0 },
+      { t: 2.7, throttle: -0.1, yaw: 0.4, pitch: 0.3, roll: 0 },
+      { t: 2.8, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 3.1, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 3.2, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+
+  // ---- INVERTED ----
+  { name: "Inverted Hover", category: "Inverted", difficulty: "Intermediate",
+    description: "Roll inverted (180°) and maintain a stable hover with negative throttle, then roll back upright (180°).",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.4, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.5, throttle: -0.1, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.5, throttle: -0.1, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.6, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.9, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 2.0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Inverted Forward Flight", category: "Inverted", difficulty: "Advanced",
+    description: "Roll inverted (180°), fly forward with reversed pitch, then roll back upright (180°).",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.4, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.5, throttle: -0.1, yaw: 0, pitch: 0.4, roll: 0 },
+      { t: 1.5, throttle: -0.1, yaw: 0, pitch: 0.4, roll: 0 },
+      { t: 1.6, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.9, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 2.0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Inverted Flip", category: "Inverted", difficulty: "Advanced",
+    description: "Roll inverted (180°), perform a full flip while inverted, then roll back upright (180°).",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.4, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.5, throttle: -0.2, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.2, throttle: -0.1, yaw: 0, pitch: 1, roll: 0 },
+      { t: 1.3, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.4, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.7, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.8, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Sustained Inverted", category: "Inverted", difficulty: "Advanced",
+    description: "Roll inverted (180°), hold for 3+ seconds with steady negative throttle, then roll back upright (180°).",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.4, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.5, throttle: -0.15, yaw: 0, pitch: 0.1, roll: 0 },
+      { t: 2.5, throttle: -0.15, yaw: 0, pitch: 0.1, roll: 0 },
+      { t: 2.6, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 2.9, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 3.0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Inverted Roll", category: "Inverted", difficulty: "Master",
+    description: "Roll inverted (180°), perform a full 360° roll while inverted, then roll back upright (180°).",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.4, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.5, throttle: -0.1, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.6, throttle: -0.1, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.3, throttle: -0.1, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.4, throttle: -0.1, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.5, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.8, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.9, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+
+  // ---- JUICY MOVES ----
+  { name: "Matty Flip", category: "Juicy Moves", difficulty: "Intermediate",
+    description: "Reverse powerloop: fly over an object, pitch FORWARD to dive and flip under it, throttle up to fly out beneath. Named after Matty Stuntz.",
+    motion: [
+      { t: 0, throttle: 0.5, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.2, yaw: 0, pitch: -0.5, roll: 0 },
+      { t: 0.4, throttle: 0.1, yaw: 0, pitch: -1, roll: 0 },
+      { t: 0.9, throttle: 0.1, yaw: 0, pitch: -1, roll: 0 },
+      { t: 1.1, throttle: 0.5, yaw: 0, pitch: -0.3, roll: 0 },
+      { t: 1.4, throttle: 0.5, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Juicy Flick Right", category: "Juicy Moves", difficulty: "Advanced",
+    description: "Aggressive pitch forward to inverted, then half roll right to upright. Mix left yaw with the roll for clean camera.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.6, yaw: 0, pitch: -1, roll: 0 },
+      { t: 0.4, throttle: 0.2, yaw: 0, pitch: -1, roll: 0 },
+      { t: 0.5, throttle: 0.3, yaw: -0.5, pitch: 0, roll: 1 },
+      { t: 0.8, throttle: 0.3, yaw: -0.5, pitch: 0, roll: 1 },
+      { t: 0.9, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Juicy Flick Left", category: "Juicy Moves", difficulty: "Advanced",
+    description: "Aggressive pitch forward to inverted, then half roll left to upright. Mix right yaw with the roll for clean camera.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.6, yaw: 0, pitch: -1, roll: 0 },
+      { t: 0.4, throttle: 0.2, yaw: 0, pitch: -1, roll: 0 },
+      { t: 0.5, throttle: 0.3, yaw: 0.5, pitch: 0, roll: -1 },
+      { t: 0.8, throttle: 0.3, yaw: 0.5, pitch: 0, roll: -1 },
+      { t: 0.9, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Corkscrew", category: "Juicy Moves", difficulty: "Intermediate",
+    description: "Forward flight with simultaneous roll and yaw creating a spiral path.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: -0.3, roll: 0 },
+      { t: 0.2, throttle: 0.45, yaw: 0.5, pitch: -0.3, roll: 0.7 },
+      { t: 1.2, throttle: 0.45, yaw: 0.5, pitch: -0.3, roll: 0.7 },
+      { t: 1.4, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Helicopter", category: "Juicy Moves", difficulty: "Intermediate",
+    description: "Sustained flat yaw spin while maintaining altitude. Like a helicopter rotor.",
+    motion: [
+      { t: 0, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.4, yaw: 1, pitch: 0, roll: 0 },
+      { t: 1.8, throttle: 0.4, yaw: 1, pitch: 0, roll: 0 },
+      { t: 2.0, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Tornado", category: "Juicy Moves", difficulty: "Advanced",
+    description: "Fast yaw spin while descending. Cut throttle and add full yaw.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.05, yaw: 1, pitch: 0, roll: 0 },
+      { t: 1.3, throttle: 0.05, yaw: 1, pitch: 0, roll: 0 },
+      { t: 1.5, throttle: 0.5, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Scrub", category: "Juicy Moves", difficulty: "Master",
+    description: "Mid-air direction change by flicking the quad sideways with roll+yaw, then correcting. Extremely stylish.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: -0.3, roll: 0 },
+      { t: 0.15, throttle: 0.4, yaw: 0.9, pitch: 0, roll: 0.9 },
+      { t: 0.35, throttle: 0.4, yaw: -0.5, pitch: -0.2, roll: -0.5 },
+      { t: 0.55, throttle: 0.4, yaw: 0, pitch: -0.3, roll: 0 }
+    ]},
+
+  // ---- PROXIMITY ----
+  { name: "Low Pass", category: "Proximity", difficulty: "Novice",
+    description: "Fast forward flight very close to the ground. Tilt nose down, hold, then level out.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.3, yaw: 0, pitch: -0.5, roll: 0 },
+      { t: 0.2, throttle: 0.3, yaw: 0, pitch: -0.5, roll: 0 },
+      { t: 0.3, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.2, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.3, throttle: 0.35, yaw: 0, pitch: 0.5, roll: 0 },
+      { t: 1.4, throttle: 0.35, yaw: 0, pitch: 0.5, roll: 0 },
+      { t: 1.5, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Gap Shot", category: "Proximity", difficulty: "Intermediate",
+    description: "Fly through a gap or window. Line up, commit with forward pitch, then level out.",
+    motion: [
+      { t: 0, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.35, yaw: 0, pitch: -0.5, roll: 0 },
+      { t: 0.2, throttle: 0.4, yaw: 0, pitch: -0.5, roll: 0 },
+      { t: 0.3, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.7, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.8, throttle: 0.35, yaw: 0, pitch: 0.5, roll: 0 },
+      { t: 0.9, throttle: 0.35, yaw: 0, pitch: 0.5, roll: 0 },
+      { t: 1.0, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Wall Ride", category: "Proximity", difficulty: "Advanced",
+    description: "Roll 90° to knife edge, fly along the wall using yaw for lift, then roll back level.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.5, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.2, throttle: 0.5, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.3, throttle: 0.5, yaw: 0.5, pitch: 0, roll: 0 },
+      { t: 1.0, throttle: 0.5, yaw: 0.5, pitch: 0, roll: 0 },
+      { t: 1.1, throttle: 0.4, yaw: 0, pitch: 0, roll: -1 },
+      { t: 1.2, throttle: 0.4, yaw: 0, pitch: 0, roll: -1 },
+      { t: 1.3, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Proximity Roll", category: "Proximity", difficulty: "Advanced",
+    description: "Perform an aileron roll very close to the ground or an object.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: -0.3, roll: 0 },
+      { t: 0.2, throttle: 0.5, yaw: 0, pitch: -0.2, roll: 1 },
+      { t: 0.6, throttle: 0.4, yaw: 0, pitch: -0.2, roll: 1 },
+      { t: 0.8, throttle: 0.35, yaw: 0, pitch: -0.3, roll: 0 }
+    ]},
+  { name: "Skid Turn", category: "Proximity", difficulty: "Intermediate",
+    description: "Sharp yaw turn close to the ground while maintaining altitude.",
+    motion: [
+      { t: 0, throttle: 0.35, yaw: 0, pitch: -0.3, roll: 0 },
+      { t: 0.2, throttle: 0.45, yaw: 0.8, pitch: 0, roll: 0.3 },
+      { t: 0.6, throttle: 0.45, yaw: 0.8, pitch: 0, roll: 0.3 },
+      { t: 0.8, throttle: 0.35, yaw: 0, pitch: -0.3, roll: 0 }
+    ]},
+
+  // ---- THROTTLE TRICKS ----
+  { name: "Throttle Punch", category: "Throttle Tricks", difficulty: "Beginner",
+    description: "Full throttle burst straight up. Simple but foundational for gaining altitude quickly.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 1, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.6, throttle: 1, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.8, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Throttle Blip", category: "Throttle Tricks", difficulty: "Beginner",
+    description: "Quick throttle tap for a small altitude pop. Used to initiate many tricks.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.7, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.25, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Throttle Cut Freefall", category: "Throttle Tricks", difficulty: "Novice",
+    description: "Cut throttle to zero and let the quad freefall, then catch with throttle.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: -1, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.8, throttle: -1, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.0, throttle: 0.6, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.3, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Pump & Dump", category: "Throttle Tricks", difficulty: "Intermediate",
+    description: "Rapid throttle oscillations — punch up, cut, punch up, cut. Creates a bouncing flight path.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.9, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.4, throttle: 0, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.6, throttle: 0.9, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.8, throttle: 0, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.0, throttle: 0.9, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.2, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Hang Time", category: "Throttle Tricks", difficulty: "Novice",
+    description: "Throttle punch to apex, then zero throttle to float at the top. Practice timing.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 1, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.4, throttle: 0, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.0, throttle: 0, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.2, throttle: 0.5, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+
+  // ---- SPINS (complex rotational) ----
+  { name: "Flat Spin Right", category: "Spins", difficulty: "Intermediate",
+    description: "Fast flat rotation using yaw with slight roll. Quad stays mostly level.",
+    motion: [
+      { t: 0, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.4, yaw: 1, pitch: 0, roll: 0.2 },
+      { t: 1.0, throttle: 0.4, yaw: 1, pitch: 0, roll: 0.2 },
+      { t: 1.2, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Flat Spin Left", category: "Spins", difficulty: "Intermediate",
+    description: "Fast flat rotation to the left.",
+    motion: [
+      { t: 0, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.4, yaw: -1, pitch: 0, roll: -0.2 },
+      { t: 1.0, throttle: 0.4, yaw: -1, pitch: 0, roll: -0.2 },
+      { t: 1.2, throttle: 0.35, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Death Spiral", category: "Spins", difficulty: "Advanced",
+    description: "Descending yaw spin with throttle cut. Spinning while falling — recover at the bottom.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0, yaw: 1, pitch: -0.3, roll: 0 },
+      { t: 1.2, throttle: 0, yaw: 1, pitch: -0.3, roll: 0 },
+      { t: 1.4, throttle: 0.7, yaw: 0, pitch: 0.3, roll: 0 },
+      { t: 1.7, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Tumble Spin", category: "Spins", difficulty: "Advanced",
+    description: "Off-axis tumble combining pitch and roll for chaotic rotation.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.4, yaw: 0, pitch: 0.8, roll: 0.8 },
+      { t: 0.8, throttle: 0.3, yaw: 0, pitch: 0.8, roll: 0.8 },
+      { t: 1.0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Blender", category: "Spins", difficulty: "Master",
+    description: "All four axes active simultaneously creating chaotic multi-axis rotation.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.5, yaw: 0.8, pitch: 0.8, roll: 0.8 },
+      { t: 1.2, throttle: 0.4, yaw: 0.8, pitch: 0.8, roll: 0.8 },
+      { t: 1.4, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Reverse Tumble", category: "Spins", difficulty: "Advanced",
+    description: "Tumble in the opposite direction. Combine pitch forward with roll.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.4, yaw: 0, pitch: -0.8, roll: 0.8 },
+      { t: 0.8, throttle: 0.3, yaw: 0, pitch: -0.8, roll: 0.8 },
+      { t: 1.0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+
+  // ---- ADVANCED MANEUVERS ----
+  { name: "Cuban Eight", category: "Advanced Maneuvers", difficulty: "Advanced",
+    description: "Figure-8 in the vertical plane. Two consecutive 3/4 loops with half rolls at the intersection.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.3, throttle: 0.7, yaw: 0, pitch: 0.7, roll: 0 },
+      { t: 0.8, throttle: 0.5, yaw: 0, pitch: 0.5, roll: 0 },
+      { t: 0.9, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.2, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 1.3, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.4, throttle: 0.4, yaw: 0, pitch: -0.3, roll: 0 },
+      { t: 1.7, throttle: 0.7, yaw: 0, pitch: 0.7, roll: 0 },
+      { t: 2.2, throttle: 0.5, yaw: 0, pitch: 0.5, roll: 0 },
+      { t: 2.3, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 2.6, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 2.7, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Humpty Bump", category: "Advanced Maneuvers", difficulty: "Advanced",
+    description: "Vertical climb, 180° pitch at top, vertical descent, then pull out. Like a roller coaster bump.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.9, yaw: 0, pitch: 0.5, roll: 0 },
+      { t: 0.6, throttle: 0.8, yaw: 0, pitch: 0.3, roll: 0 },
+      { t: 0.8, throttle: 0.1, yaw: 0, pitch: 0.9, roll: 0 },
+      { t: 1.1, throttle: 0.1, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.3, throttle: 0.1, yaw: 0, pitch: -0.3, roll: 0 },
+      { t: 1.6, throttle: 0.6, yaw: 0, pitch: 0.5, roll: 0 },
+      { t: 1.9, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Stall Turn", category: "Advanced Maneuvers", difficulty: "Advanced",
+    description: "Climb vertically, stall, yaw 180° at the top, then dive back down.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 0.9, yaw: 0, pitch: 0.5, roll: 0 },
+      { t: 0.6, throttle: 0, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.7, throttle: 0, yaw: 1, pitch: 0, roll: 0 },
+      { t: 1.0, throttle: 0, yaw: 1, pitch: 0, roll: 0 },
+      { t: 1.1, throttle: 0, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.3, throttle: 0.3, yaw: 0, pitch: -0.5, roll: 0 },
+      { t: 1.7, throttle: 0.5, yaw: 0, pitch: 0.3, roll: 0 },
+      { t: 2.0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Rolling Harrier", category: "Advanced Maneuvers", difficulty: "Master",
+    description: "Slow forward flight at high angle of attack while rolling. Requires precise throttle-pitch coordination.",
+    motion: [
+      { t: 0, throttle: 0.5, yaw: 0, pitch: 0.4, roll: 0 },
+      { t: 0.2, throttle: 0.55, yaw: 0, pitch: 0.4, roll: 0.6 },
+      { t: 1.2, throttle: 0.55, yaw: 0, pitch: 0.4, roll: 0.6 },
+      { t: 1.4, throttle: 0.5, yaw: 0, pitch: 0.2, roll: 0 },
+      { t: 1.6, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Waterfall", category: "Advanced Maneuvers", difficulty: "Master",
+    description: "Vertical climb transitioning to inverted freefall. Throttle punch up, pitch back past vertical, then cut throttle.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.2, throttle: 1, yaw: 0, pitch: 0.3, roll: 0 },
+      { t: 0.5, throttle: 0.8, yaw: 0, pitch: 0.6, roll: 0 },
+      { t: 0.8, throttle: 0, yaw: 0, pitch: 0.8, roll: 0 },
+      { t: 1.2, throttle: 0, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.5, throttle: 0.6, yaw: 0, pitch: -0.4, roll: 0 },
+      { t: 1.8, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Parachute", category: "Advanced Maneuvers", difficulty: "Intermediate",
+    description: "Nose up hover descent. Pitch back to ~45° nose up, hold with throttle, then level out.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.5, yaw: 0, pitch: 0.5, roll: 0 },
+      { t: 0.2, throttle: 0.5, yaw: 0, pitch: 0.5, roll: 0 },
+      { t: 0.3, throttle: 0.5, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.5, throttle: 0.5, yaw: 0, pitch: 0, roll: 0 },
+      { t: 1.6, throttle: 0.4, yaw: 0, pitch: -0.5, roll: 0 },
+      { t: 1.7, throttle: 0.4, yaw: 0, pitch: -0.5, roll: 0 },
+      { t: 1.8, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Trippy Spin", category: "Advanced Maneuvers", difficulty: "Master",
+    description: "Inverted orbit around a pole. Roll inverted toward the object, then coordinate roll + opposite yaw to spin around it while inverted.",
+    motion: [
+      { t: 0, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.4, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.5, throttle: -0.1, yaw: -0.7, pitch: 0, roll: 0.7 },
+      { t: 1.8, throttle: -0.1, yaw: -0.7, pitch: 0, roll: 0.7 },
+      { t: 1.9, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 2.2, throttle: 0.3, yaw: 0, pitch: 0, roll: 1 },
+      { t: 2.3, throttle: 0.3, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+  { name: "Knife Edge Loop", category: "Advanced Maneuvers", difficulty: "Master",
+    description: "A full loop performed while rolled 90° on the knife edge. Uses yaw as primary pitch control.",
+    motion: [
+      { t: 0, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.1, throttle: 0.4, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.2, throttle: 0.4, yaw: 0, pitch: 0, roll: 1 },
+      { t: 0.3, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 },
+      { t: 0.4, throttle: 0.6, yaw: 0.8, pitch: 0, roll: 0 },
+      { t: 1.1, throttle: 0.5, yaw: 0.8, pitch: 0, roll: 0 },
+      { t: 1.4, throttle: 0.3, yaw: 0.6, pitch: 0, roll: 0 },
+      { t: 1.5, throttle: 0.4, yaw: 0, pitch: 0, roll: -1 },
+      { t: 1.6, throttle: 0.4, yaw: 0, pitch: 0, roll: -1 },
+      { t: 1.7, throttle: 0.4, yaw: 0, pitch: 0, roll: 0 }
+    ]},
+];
+
+// Normalize trick motions so integrated rotations are close to exact multiples
+// of full rotations. This reduces the amount of distributed SLERP correction needed.
+// Only adjusts axes whose integral is within 25% of a full-rotation multiple.
+(function normalizeTricks() {
+  const FULL_ROT = 2 * Math.PI / (Math.PI * 2.5); // 0.8 rate-seconds per rotation
+  for (const trick of TRICKS) {
+    const motion = trick.motion;
+    for (const axis of ['roll', 'pitch', 'yaw']) {
+      // Trapezoidal integral of rate over time
+      let integral = 0;
+      for (let i = 0; i < motion.length - 1; i++) {
+        const dt = motion[i + 1].t - motion[i].t;
+        integral += (motion[i][axis] + motion[i + 1][axis]) / 2 * dt;
+      }
+      if (Math.abs(integral) < FULL_ROT * 0.3) continue; // negligible axis
+      const nRot = integral / FULL_ROT;
+      const nearest = Math.round(nRot);
+      if (nearest === 0) continue;
+      // Only normalize if within 25% of a clean multiple
+      if (Math.abs(nRot - nearest) > 0.25) continue;
+      const scale = (nearest * FULL_ROT) / integral;
+      for (const kf of motion) {
+        kf[axis] = Math.max(-1, Math.min(1, kf[axis] * scale));
+      }
+    }
+  }
+})();
+
+// ============================================================
+// APP STATE
+// ============================================================
+const DEFAULT_CAL = {
+  // Which raw axis index maps to each function
+  throttleAxis: 1, yawAxis: 0, pitchAxis: 3, rollAxis: 2,
+  // Whether to invert each function
+  throttleInvert: true, yawInvert: false, pitchInvert: true, rollInvert: false,
+  deadzone: 0.05,
+};
+
+function loadCalibration() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('fpv-trick-calibration'));
+    return saved ? { ...DEFAULT_CAL, ...saved } : { ...DEFAULT_CAL };
+  } catch { return { ...DEFAULT_CAL }; }
+}
+
+function saveCalibration() {
+  localStorage.setItem('fpv-trick-calibration', JSON.stringify(state.calibration));
+}
+
+const DEFAULT_DISPLAY_INVERT = { throttle: false, yaw: false, pitch: false, roll: false };
+
+function loadDisplayInvert() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('fpv-trick-display-invert'));
+    return saved ? { ...DEFAULT_DISPLAY_INVERT, ...saved } : { ...DEFAULT_DISPLAY_INVERT };
+  } catch { return { ...DEFAULT_DISPLAY_INVERT }; }
+}
+
+function saveDisplayInvert() {
+  localStorage.setItem('fpv-trick-display-invert', JSON.stringify(state.displayInvert));
+}
+
+const DEFAULT_SETTINGS = {
+  loop: true,
+  showGhost: true,
+  showSticks: true,
+  autoPlay: false,
+  showAccuracy: true,
+};
+
+function loadSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('fpv-trick-settings'));
+    return saved ? { ...DEFAULT_SETTINGS, ...saved } : { ...DEFAULT_SETTINGS };
+  } catch { return { ...DEFAULT_SETTINGS }; }
+}
+
+function saveSettings() {
+  localStorage.setItem('fpv-trick-settings', JSON.stringify(state.settings));
+}
+
+const state = {
+  selectedTrick: null,
+  searchQuery: '',
+  difficultyFilter: 'all',
+  gamepadIndex: null,
+  gamepadRawAxes: [],
+  gamepadAxes: [0, 0, 0, 0],
+  calibration: loadCalibration(),
+  displayInvert: loadDisplayInvert(),
+  settings: loadSettings(),
+  calOpen: false,
+  playing: false,
+  playbackTime: 0,
+  playbackSpeed: 1,
+  lastFrameTime: null,
+  progress: loadProgress(),
+  currentAccuracy: 0,
+  accuracySamples: [],
+  userQuat: null,
+  camOrbitX: 0,
+  camOrbitY: 0,
+  camDragging: false,
+  camDragStart: null,
+  camOrbitStartX: 0,
+  camOrbitStartY: 0,
+  camZoom: 1.0,
+  showGrid: true,
+};
+
+function loadProgress() {
+  try {
+    return JSON.parse(localStorage.getItem('fpv-trick-progress') || '{}');
+  } catch { return {}; }
+}
+
+function saveProgress() {
+  localStorage.setItem('fpv-trick-progress', JSON.stringify(state.progress));
+}
+
+function getTrickKey(trick) {
+  return trick.category + ':' + trick.name;
+}
+
+function getTrickProgress(trick) {
+  return state.progress[getTrickKey(trick)] || {};
+}
+
+function setTrickStatus(trick, status) {
+  const key = getTrickKey(trick);
+  if (!state.progress[key]) state.progress[key] = {};
+  const current = state.progress[key].status;
+  state.progress[key].status = (current === status) ? null : status;
+  saveProgress();
+  renderSidebar();
+  renderTrickDetail();
+}
+
+function updateBestScore(trick, score) {
+  const key = getTrickKey(trick);
+  if (!state.progress[key]) state.progress[key] = {};
+  if (!state.progress[key].bestScore || score > state.progress[key].bestScore) {
+    state.progress[key].bestScore = score;
+    saveProgress();
+  }
+}
+
+// ============================================================
+// CATEGORIES & COLORS
+// ============================================================
+const DIFFICULTY_COLORS = {
+  Beginner: 'var(--green)',
+  Novice: 'var(--blue)',
+  Intermediate: 'var(--yellow)',
+  Advanced: 'var(--orange)',
+  Master: 'var(--red)',
+};
+
+const DIFFICULTY_ORDER = ['Beginner', 'Novice', 'Intermediate', 'Advanced', 'Master'];
+
+function getCategories() {
+  const cats = [];
+  const seen = new Set();
+  for (const t of TRICKS) {
+    if (!seen.has(t.category)) {
+      seen.add(t.category);
+      cats.push(t.category);
+    }
+  }
+  return cats;
+}
+
+// ============================================================
+// SIDEBAR RENDERING
+// ============================================================
+function getFilteredTricks() {
+  return TRICKS.filter(t => {
+    if (state.difficultyFilter !== 'all' && t.difficulty !== state.difficultyFilter) return false;
+    if (state.searchQuery && !t.name.toLowerCase().includes(state.searchQuery.toLowerCase())) return false;
+    return true;
+  });
+}
+
+function renderSidebar() {
+  const list = document.getElementById('trickList');
+  const filtered = getFilteredTricks();
+  const categories = getCategories();
+
+  let html = '';
+  for (const cat of categories) {
+    const catTricks = filtered.filter(t => t.category === cat);
+    if (catTricks.length === 0) continue;
+
+    const allInCat = TRICKS.filter(t => t.category === cat);
+    const mastered = allInCat.filter(t => getTrickProgress(t).status === 'mastered').length;
+    const pct = allInCat.length > 0 ? (mastered / allInCat.length * 100) : 0;
+
+    html += `<div class="category-group">
+      <div class="category-header">
+        <span>${cat}</span>
+        <div class="category-progress"><div class="category-progress-fill" style="width:${pct}%"></div></div>
+      </div>`;
+
+    for (const trick of catTricks) {
+      const prog = getTrickProgress(trick);
+      const selected = state.selectedTrick && getTrickKey(state.selectedTrick) === getTrickKey(trick);
+      const diffClass = 'diff-' + trick.difficulty.toLowerCase();
+      let statusHtml = '';
+      if (prog.status) {
+        statusHtml = `<span class="trick-status status-${prog.status}">${prog.status}</span>`;
+      }
+      html += `<div class="trick-item${selected ? ' selected' : ''}" data-trick="${getTrickKey(trick)}">
+        <span class="diff-badge ${diffClass}"></span>
+        <span class="trick-name">${trick.name}</span>
+        ${statusHtml}
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  list.innerHTML = html;
+
+  list.querySelectorAll('.trick-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const key = el.dataset.trick;
+      const trick = TRICKS.find(t => getTrickKey(t) === key);
+      if (trick) selectTrick(trick);
+    });
+  });
+}
+
+// ============================================================
+// TRICK DETAIL RENDERING
+// ============================================================
+function selectTrick(trick) {
+  state.selectedTrick = trick;
+  state.playing = false;
+  state.playbackTime = 0;
+  state.lastFrameTime = null;
+  state.accuracySamples = [];
+  state.currentAccuracy = 0;
+  state.userQuat = qI();
+  renderSidebar();
+  renderTrickDetail();
+  if (state.settings.autoPlay) {
+    togglePlay();
+  }
+}
+
+function renderTrickDetail() {
+  const container = document.getElementById('trickDetail');
+  const trick = state.selectedTrick;
+
+  if (!trick) {
+    container.className = 'trick-detail empty';
+    container.innerHTML = `<div class="empty-state">
+      <h2>Select a Trick</h2>
+      <p>Choose a trick from the sidebar to start practicing.<br>Connect a game controller for stick input tracking.</p>
+    </div>`;
+    return;
+  }
+
+  container.className = 'trick-detail';
+  const prog = getTrickProgress(trick);
+  const diffColor = DIFFICULTY_COLORS[trick.difficulty];
+  const maxT = trick.motion[trick.motion.length - 1].t;
+
+  container.innerHTML = `
+    <div class="trick-header">
+      <div class="trick-header-left">
+        <h2>${trick.name}</h2>
+        <div class="trick-meta">
+          <span class="trick-diff-label" style="background:${diffColor}22;color:${diffColor};border:1px solid ${diffColor}44">${trick.difficulty}</span>
+          <span>${trick.category}</span>
+        </div>
+      </div>
+      <div class="progress-btns">
+        <button class="progress-btn${prog.status === 'learning' ? ' active-learning' : ''}" onclick="setTrickStatus(state.selectedTrick,'learning')">Learning</button>
+        <button class="progress-btn${prog.status === 'practiced' ? ' active-practiced' : ''}" onclick="setTrickStatus(state.selectedTrick,'practiced')">Practiced</button>
+        <button class="progress-btn${prog.status === 'mastered' ? ' active-mastered' : ''}" onclick="setTrickStatus(state.selectedTrick,'mastered')">Mastered</button>
+      </div>
+    </div>
+    <p class="trick-description">${trick.description}</p>
+    <div class="quad3d-container">
+      <canvas class="quad3d-canvas" id="quad3dCanvas" width="480" height="320"></canvas>
+      <div class="viewport-toolbar">
+        <button class="vp-btn" title="Front view" onclick="setCamPreset(0, 0)">F</button>
+        <button class="vp-btn" title="Right view" onclick="setCamPreset(Math.PI/2, 0)">R</button>
+        <button class="vp-btn" title="Top view" onclick="setCamPreset(0, -Math.PI/2+0.01)">T</button>
+        <div class="vp-sep"></div>
+        <button class="vp-btn" title="Reset view (Dbl-click)" onclick="resetCamView()">
+          <svg viewBox="0 0 16 16"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 2a1.25 1.25 0 1 1 0 2.5A1.25 1.25 0 0 1 8 3zM5.5 12v-1h1.75V7.5H5.5v-1h3.25V11h1.75v1z"/></svg>
+        </button>
+        <button class="vp-btn active" id="gridToggle" title="Toggle grid" onclick="toggleGrid()">
+          <svg viewBox="0 0 16 16"><path d="M0 0h5v5H0zm5.5 0h5v5h-5zM11 0h5v5h-5zM0 5.5h5v5H0zm5.5 0h5v5h-5zM11 5.5h5v5h-5zM0 11h5v5H0zm5.5 0h5v5h-5zM11 11h5v5h-5z"/></svg>
+        </button>
+      </div>
+      <div class="viewport-zoom">
+        <button class="vp-btn" title="Zoom in" onclick="camZoomStep(-1)">+</button>
+        <button class="vp-btn" title="Zoom out" onclick="camZoomStep(1)">−</button>
+      </div>
+      <canvas class="viewport-gizmo" id="axisGizmo" width="56" height="56"></canvas>
+    </div>
+    <div class="visualizer-area" style="${state.settings.showSticks ? '' : 'display:none'}">
+      <div class="stick-container">
+        <div class="stick-label">Left Stick</div>
+        <canvas class="stick-canvas" id="leftStickCanvas" width="200" height="200"></canvas>
+        <div class="stick-sublabel">Throttle / Yaw</div>
+      </div>
+      <div class="accuracy-display" style="${state.settings.showAccuracy ? '' : 'display:none'}">
+        <div class="accuracy-label">Accuracy</div>
+        <div class="accuracy-value" id="accuracyValue" style="color:var(--text-secondary)">--</div>
+        <div class="best-score" id="bestScore">${prog.bestScore ? 'Best: ' + prog.bestScore + '%' : ''}</div>
+      </div>
+      <div class="stick-container">
+        <div class="stick-label">Right Stick</div>
+        <canvas class="stick-canvas" id="rightStickCanvas" width="200" height="200"></canvas>
+        <div class="stick-sublabel">Pitch / Roll</div>
+      </div>
+    </div>
+    <div class="quick-cal-bar">
+      <span class="qcal-label">Flip display:</span>
+      <label class="qcal-toggle${state.displayInvert.throttle ? ' active' : ''}">
+        <input type="checkbox" data-dinv="throttle"${state.displayInvert.throttle ? ' checked' : ''}> Throttle
+      </label>
+      <label class="qcal-toggle${state.displayInvert.yaw ? ' active' : ''}">
+        <input type="checkbox" data-dinv="yaw"${state.displayInvert.yaw ? ' checked' : ''}> Yaw
+      </label>
+      <label class="qcal-toggle${state.displayInvert.pitch ? ' active' : ''}">
+        <input type="checkbox" data-dinv="pitch"${state.displayInvert.pitch ? ' checked' : ''}> Pitch
+      </label>
+      <label class="qcal-toggle${state.displayInvert.roll ? ' active' : ''}">
+        <input type="checkbox" data-dinv="roll"${state.displayInvert.roll ? ' checked' : ''}> Roll
+      </label>
+      <button class="qcal-more" id="qcalMoreBtn">Settings...</button>
+    </div>
+    <div class="playback-area">
+      <div class="timeline-bar" id="timelineBar">
+        <div class="timeline-fill" id="timelineFill" style="width:0%"></div>
+        <div class="timeline-keyframes" id="timelineKeyframes"></div>
+      </div>
+      <div class="controls-row">
+        <button class="ctrl-btn${state.playing ? ' playing' : ''}" id="playBtn" title="Play/Pause">&#9654;</button>
+        <div class="time-display" id="timeDisplay">0.00 / ${maxT.toFixed(2)}s</div>
+        <div class="speed-control">
+          <span>Speed</span>
+          <input type="range" class="speed-slider" id="speedSlider" min="0.25" max="2" step="0.25" value="${state.playbackSpeed}">
+          <span class="speed-value" id="speedValue">${state.playbackSpeed}x</span>
+        </div>
+      </div>
+    </div>`;
+
+  // Render keyframe markers on timeline
+  const kfContainer = document.getElementById('timelineKeyframes');
+  if (kfContainer && maxT > 0) {
+    trick.motion.forEach(kf => {
+      const pct = (kf.t / maxT) * 100;
+      const marker = document.createElement('div');
+      marker.className = 'timeline-keyframe';
+      marker.style.left = pct + '%';
+      kfContainer.appendChild(marker);
+    });
+  }
+
+  // Event listeners
+  document.getElementById('playBtn').addEventListener('click', togglePlay);
+  document.getElementById('speedSlider').addEventListener('input', e => {
+    state.playbackSpeed = parseFloat(e.target.value);
+    document.getElementById('speedValue').textContent = state.playbackSpeed + 'x';
+  });
+  document.getElementById('timelineBar').addEventListener('click', e => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    state.playbackTime = pct * maxT;
+  });
+
+  // Display inversion toggles
+  document.querySelectorAll('.qcal-toggle input').forEach(cb => {
+    cb.addEventListener('change', e => {
+      const key = e.target.dataset.dinv;
+      state.displayInvert[key] = e.target.checked;
+      e.target.parentElement.classList.toggle('active', e.target.checked);
+      saveDisplayInvert();
+    });
+  });
+  document.getElementById('qcalMoreBtn').addEventListener('click', openCalibration);
+}
+
+function togglePlay() {
+  state.playing = !state.playing;
+  if (state.playing) {
+    state.playbackTime = 0;
+    state.lastFrameTime = performance.now();
+    state.accuracySamples = [];
+    state.currentAccuracy = 0;
+    state.userQuat = qI();
+    const btn = document.getElementById('playBtn');
+    if (btn) { btn.classList.add('playing'); btn.innerHTML = '&#9646;&#9646;'; }
+  } else {
+    const btn = document.getElementById('playBtn');
+    if (btn) { btn.classList.remove('playing'); btn.innerHTML = '&#9654;'; }
+  }
+}
+
+// ============================================================
+// MOTION INTERPOLATION
+// ============================================================
+function interpolateMotion(motion, time) {
+  if (time <= motion[0].t) return { ...motion[0] };
+  if (time >= motion[motion.length - 1].t) return { ...motion[motion.length - 1] };
+
+  for (let i = 0; i < motion.length - 1; i++) {
+    if (time >= motion[i].t && time <= motion[i + 1].t) {
+      const a = motion[i];
+      const b = motion[i + 1];
+      const f = (time - a.t) / (b.t - a.t);
+      return {
+        t: time,
+        throttle: a.throttle + (b.throttle - a.throttle) * f,
+        yaw: a.yaw + (b.yaw - a.yaw) * f,
+        pitch: a.pitch + (b.pitch - a.pitch) * f,
+        roll: a.roll + (b.roll - a.roll) * f,
+      };
+    }
+  }
+  return { ...motion[motion.length - 1] };
+}
+
+// ============================================================
+// GAMEPAD
+// ============================================================
+window.addEventListener('gamepadconnected', e => {
+  state.gamepadIndex = e.gamepad.index;
+  document.getElementById('gamepadDot').classList.add('connected');
+  document.getElementById('gamepadText').textContent = e.gamepad.id.substring(0, 40);
+});
+
+window.addEventListener('gamepaddisconnected', e => {
+  if (state.gamepadIndex === e.gamepad.index) {
+    state.gamepadIndex = null;
+    state.gamepadAxes = [0, 0, 0, 0];
+    document.getElementById('gamepadDot').classList.remove('connected');
+    document.getElementById('gamepadText').textContent = 'No controller detected';
+  }
+});
+
+function applyDeadzone(val, dz) {
+  if (Math.abs(val) < dz) return 0;
+  const sign = val > 0 ? 1 : -1;
+  return sign * (Math.abs(val) - dz) / (1 - dz);
+}
+
+function pollGamepad() {
+  if (state.gamepadIndex === null) return;
+  const gp = navigator.getGamepads()[state.gamepadIndex];
+  if (!gp) return;
+
+  // Store all raw axes for calibration UI
+  state.gamepadRawAxes = Array.from(gp.axes);
+
+  const cal = state.calibration;
+  const dz = cal.deadzone;
+  const raw = (idx) => gp.axes[idx] || 0;
+
+  const yaw = applyDeadzone(raw(cal.yawAxis) * (cal.yawInvert ? -1 : 1), dz);
+  const throttle = applyDeadzone(raw(cal.throttleAxis) * (cal.throttleInvert ? -1 : 1), dz);
+  const roll = applyDeadzone(raw(cal.rollAxis) * (cal.rollInvert ? -1 : 1), dz);
+  const pitch = applyDeadzone(raw(cal.pitchAxis) * (cal.pitchInvert ? -1 : 1), dz);
+
+  // gamepadAxes: [yaw, throttle, roll, pitch] — already in logical space
+  state.gamepadAxes = [yaw, throttle, roll, pitch];
+}
+
+// ============================================================
+// 3D QUAD VISUALIZATION (Quaternion-based)
+// ============================================================
+const RATE_SCALE = Math.PI * 2.5; // ~450 deg/sec at full stick
+const VIEW_TILT = -0.45;
+const VIEW_YAW = 0.15;
+const FOCAL = 220;
+const CAM_DIST = 4.5;
+const ARM = 0.95;
+const PROP_RADIUS = 0.4;
+
+// Physics constants for flight path
+const GRAVITY = 9.8;
+const THRUST_SCALE = 28.0; // hover at throttle ~0.35: 0.35*28=9.8=gravity
+const PHYSICS_DT = 0.004; // 4ms integration step
+
+// --- Quaternion helpers ---
+function qI() { return [1, 0, 0, 0]; }
+
+function qFromAA(ax, ay, az, angle) {
+  const h = angle * 0.5, s = Math.sin(h);
+  return [Math.cos(h), ax * s, ay * s, az * s];
+}
+
+function qMul(a, b) {
+  return [
+    a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3],
+    a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2],
+    a[0]*b[2] - a[1]*b[3] + a[2]*b[0] + a[3]*b[1],
+    a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + a[3]*b[0],
+  ];
+}
+
+function qConj(q) { return [q[0], -q[1], -q[2], -q[3]]; }
+
+function qNorm(q) {
+  const len = Math.sqrt(q[0]*q[0] + q[1]*q[1] + q[2]*q[2] + q[3]*q[3]);
+  return len > 0 ? [q[0]/len, q[1]/len, q[2]/len, q[3]/len] : qI();
+}
+
+function qRot(q, v) {
+  const r = qMul(qMul(q, [0, v[0], v[1], v[2]]), qConj(q));
+  return [r[1], r[2], r[3]];
+}
+
+function qSlerp(a, b, t) {
+  let dot = a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3];
+  let b2 = b;
+  if (dot < 0) { b2 = [-b[0], -b[1], -b[2], -b[3]]; dot = -dot; }
+  if (dot > 0.9995) {
+    const r = a.map((v, i) => v + (b2[i] - v) * t);
+    const len = Math.sqrt(r.reduce((s, v) => s + v * v, 0));
+    return r.map(v => v / len);
+  }
+  const theta = Math.acos(Math.min(1, dot));
+  const sinT = Math.sin(theta);
+  const wa = Math.sin((1 - t) * theta) / sinT;
+  const wb = Math.sin(t * theta) / sinT;
+  return [a[0]*wa + b2[0]*wb, a[1]*wa + b2[1]*wb, a[2]*wa + b2[2]*wb, a[3]*wa + b2[3]*wb];
+}
+
+// --- Camera view rotations (simple Euler for fixed camera) ---
+function rotX(p, a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  return [p[0], p[1]*c - p[2]*s, p[1]*s + p[2]*c];
+}
+function rotY(p, a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  return [p[0]*c + p[2]*s, p[1], -p[0]*s + p[2]*c];
+}
+
+// --- Rotation integration with correction ---
+// Integrate stick rates as body-frame quaternion rotations
+function integrateQuat(motion, time) {
+  const dt = 0.016;
+  let q = qI();
+  for (let t = 0; t < time; t += dt) {
+    const step = Math.min(dt, time - t);
+    const m = interpolateMotion(motion, t + step * 0.5);
+    // Body-frame incremental rotations:
+    // Roll around Z (forward), Pitch around X (right), Yaw around Y (up)
+    if (m.roll)  q = qMul(q, qFromAA(0, 0, 1, -m.roll  * step * RATE_SCALE));
+    if (m.pitch) q = qMul(q, qFromAA(1, 0, 0, -m.pitch * step * RATE_SCALE));
+    if (m.yaw)   q = qMul(q, qFromAA(0, 1, 0,  m.yaw   * step * RATE_SCALE));
+  }
+  return qNorm(q);
+}
+
+// Cache final quaternion per trick for end-correction
+const _qFinalCache = new Map();
+function getTrickFinalQuat(trick) {
+  const key = getTrickKey(trick);
+  if (_qFinalCache.has(key)) return _qFinalCache.get(key);
+  const q = integrateQuat(trick.motion, trick.motion[trick.motion.length - 1].t);
+  _qFinalCache.set(key, q);
+  return q;
+}
+
+// Compute orientation quaternion at given time with sine-weighted return-to-flat correction.
+// Correction is distributed with a sine curve: zero correction rate at start and end
+// (so the quad exactly matches sticks at takeoff and landing), with the correction
+// concentrated in the middle of the trick where it's least visible.
+function computeQuatRotation(trick, time) {
+  const motion = trick.motion;
+  const maxT = motion[motion.length - 1].t;
+  let q = integrateQuat(motion, time);
+
+  const qFinal = getTrickFinalQuat(trick);
+  const qCorr = qConj(qFinal);
+  const progress = maxT > 0 ? Math.min(time / maxT, 1) : 0;
+  // Sine-weighted cumulative: (1 - cos(πp)) / 2
+  // At p=0: 0 (no correction), p=0.5: 0.5, p=1: 1 (full correction)
+  // Derivative (correction rate) = π·sin(πp)/2 → zero at start and end
+  const weighted = (1 - Math.cos(Math.PI * progress)) / 2;
+  q = qMul(q, qSlerp(qI(), qCorr, weighted));
+  return qNorm(q);
+}
+
+// --- Flight path computation ---
+const _pathCache = new Map();
+
+function computeTrickPath(trick) {
+  const key = getTrickKey(trick);
+  if (_pathCache.has(key)) return _pathCache.get(key);
+
+  const motion = trick.motion;
+  const maxT = motion[motion.length - 1].t;
+  const sampleInterval = 1 / 60;
+
+  const qFinal = getTrickFinalQuat(trick);
+  const qCorr = qConj(qFinal);
+
+  // Integrate physics with three modes:
+  // - Orbits: kinematic heading (constant speed + heading from yaw) for clean circles
+  // - fwdSpeed tricks: kinematic forward (velocity follows body forward direction)
+  // - Everything else: thrust vector + gravity physics (hovering tricks)
+  const fwdSpeed = trick.fwdSpeed || 0;
+  const isOrbit = trick.category === 'Orbits';
+  const isPowerloop = trick.category === 'Powerloops';
+  const isKinematicFwd = fwdSpeed > 0 && !isOrbit;
+  let q = qI();
+  let vel = [0, 0, 0];
+  let pos = [0, 0, 0];
+  let heading = 0; // for orbit kinematic mode (radians, 0 = +Z)
+  const rawSamples = [{ t: 0, pos: [0, 0, 0], quat: qI() }];
+  let nextSample = sampleInterval;
+
+  for (let t = 0; t < maxT; t += PHYSICS_DT) {
+    const step = Math.min(PHYSICS_DT, maxT - t);
+    const tMid = t + step * 0.5;
+    const m = interpolateMotion(motion, tMid);
+
+    if (m.roll)  q = qMul(q, qFromAA(0, 0, 1, -m.roll  * step * RATE_SCALE));
+    if (m.pitch) q = qMul(q, qFromAA(1, 0, 0, -m.pitch * step * RATE_SCALE));
+    if (m.yaw)   q = qMul(q, qFromAA(0, 1, 0,  m.yaw   * step * RATE_SCALE));
+    q = qNorm(q);
+
+    const progress = maxT > 0 ? Math.min((t + step) / maxT, 1) : 0;
+    const weighted = (1 - Math.cos(Math.PI * progress)) / 2;
+    const qCorrected = qNorm(qMul(q, qSlerp(qI(), qCorr, weighted)));
+
+    if (isOrbit) {
+      // Kinematic orbit: constant speed, heading from yaw input
+      heading += m.yaw * step * RATE_SCALE;
+      pos[0] += fwdSpeed * Math.sin(heading) * step;
+      pos[2] += fwdSpeed * Math.cos(heading) * step;
+    } else if (isKinematicFwd) {
+      // Kinematic forward: velocity follows body forward direction (+Z in body frame)
+      // Use raw q (not qCorrected) so the path traces the full rotation arc;
+      // drift correction handles closing the loop at the end.
+      const bodyFwd = qRot(q, [0, 0, 1]);
+      pos[0] += bodyFwd[0] * fwdSpeed * step;
+      pos[1] += bodyFwd[1] * fwdSpeed * step;
+      pos[2] += bodyFwd[2] * fwdSpeed * step;
+    } else {
+      // Thrust physics (hovering tricks: rolls, flips, spins)
+      const thrustMag = Math.max(0, m.throttle) * THRUST_SCALE;
+      const thrustWorld = qRot(qCorrected, [0, thrustMag, 0]);
+      vel[0] += thrustWorld[0] * step;
+      vel[1] += (thrustWorld[1] - GRAVITY) * step;
+      vel[2] += thrustWorld[2] * step;
+      pos[0] += vel[0] * step;
+      pos[1] += vel[1] * step;
+      pos[2] += vel[2] * step;
+    }
+
+    if (t + step >= nextSample || t + step >= maxT - PHYSICS_DT * 0.5) {
+      rawSamples.push({
+        t: t + step,
+        pos: [pos[0], pos[1], pos[2]],
+        quat: qCorrected
+      });
+      nextSample += sampleInterval;
+    }
+  }
+
+  // Drift correction: always correct Y (altitude).
+  // For orbits and powerloops, also correct X/Z to close the loop.
+  const finalRaw = rawSamples[rawSamples.length - 1].pos;
+  const closedLoop = isOrbit || isPowerloop;
+  const xDrift = closedLoop ? finalRaw[0] : 0;
+  const yDrift = finalRaw[1];
+  const zDrift = closedLoop ? finalRaw[2] : 0;
+
+  const points = [];
+  for (const s of rawSamples) {
+    const p = s.t / maxT;
+    const corrW = (1 - Math.cos(Math.PI * p)) / 2;
+    points.push({
+      t: s.t,
+      pos: [s.pos[0] - xDrift * corrW, s.pos[1] - yDrift * corrW, s.pos[2] - zDrift * corrW],
+      quat: s.quat
+    });
+  }
+
+  // Compute bounding box
+  let minP = [Infinity, Infinity, Infinity];
+  let maxP = [-Infinity, -Infinity, -Infinity];
+  for (const pt of points) {
+    for (let i = 0; i < 3; i++) {
+      minP[i] = Math.min(minP[i], pt.pos[i]);
+      maxP[i] = Math.max(maxP[i], pt.pos[i]);
+    }
+  }
+
+  const result = { points, minP, maxP, maxT };
+  _pathCache.set(key, result);
+  return result;
+}
+
+function interpolatePathPosition(pathData, time) {
+  const pts = pathData.points;
+  if (time <= pts[0].t) return { pos: pts[0].pos, quat: pts[0].quat };
+  if (time >= pts[pts.length - 1].t) return { pos: pts[pts.length - 1].pos, quat: pts[pts.length - 1].quat };
+
+  for (let i = 0; i < pts.length - 1; i++) {
+    if (time >= pts[i].t && time <= pts[i + 1].t) {
+      const f = (time - pts[i].t) / (pts[i + 1].t - pts[i].t);
+      const a = pts[i], b = pts[i + 1];
+      return {
+        pos: [a.pos[0] + (b.pos[0] - a.pos[0]) * f,
+              a.pos[1] + (b.pos[1] - a.pos[1]) * f,
+              a.pos[2] + (b.pos[2] - a.pos[2]) * f],
+        quat: qSlerp(a.quat, b.quat, f)
+      };
+    }
+  }
+  return { pos: pts[pts.length - 1].pos, quat: pts[pts.length - 1].quat };
+}
+
+// --- Auto-framing camera ---
+function computeAutoFrame(pathData, canvasW, canvasH) {
+  const { minP, maxP } = pathData;
+  const center = [
+    (minP[0] + maxP[0]) / 2,
+    (minP[1] + maxP[1]) / 2,
+    (minP[2] + maxP[2]) / 2
+  ];
+  const pad = 1.2;
+  const spanX = (maxP[0] - minP[0]) + pad * 2;
+  const spanY = (maxP[1] - minP[1]) + pad * 2;
+  const spanZ = (maxP[2] - minP[2]) + pad * 2;
+
+  // Fit the perpendicular (X,Y) extents; depth (Z) only adds a fraction
+  const aspect = canvasW / canvasH;
+  const fovFitX = spanX / (2 * aspect) * (FOCAL / (canvasW / 2));
+  const fovFitY = spanY / 2 * (FOCAL / (canvasH / 2));
+  const baseDist = Math.max(fovFitX, fovFitY, 3.0) + spanZ * 0.25;
+
+  return { center, dist: baseDist * state.camZoom };
+}
+
+function makeCamera(frame, canvasW, canvasH) {
+  const cx = canvasW / 2, cy = canvasH / 2;
+  const { center, dist } = frame;
+  const tilt = VIEW_TILT + state.camOrbitY;
+  const yaw = VIEW_YAW + state.camOrbitX;
+
+  function xf(worldPt) {
+    let pt = [worldPt[0] - center[0], worldPt[1] - center[1], worldPt[2] - center[2]];
+    pt = rotX(pt, tilt);
+    pt = rotY(pt, yaw);
+    return pt;
+  }
+
+  function proj(viewPt) {
+    const scale = FOCAL / (viewPt[2] + dist);
+    return { x: cx + viewPt[0] * scale, y: cy - viewPt[1] * scale, s: scale, z: viewPt[2] };
+  }
+
+  return { xf, proj, dist, center, cx, cy };
+}
+
+// --- Draw one quad given a quaternion and style ---
+// style: { frontColor, backColor, armAlpha, bodyAlpha, hubAlpha, propAlpha, bladeAlpha, shadow }
+function drawOneQuad(ctx, q, worldPos, throttle, now, style, camera) {
+  const fc = style.frontColor || [255,120,80];
+  const bc = style.backColor  || [100,160,255];
+  const aa = style.armAlpha   ?? 0.7;
+  const ba = style.bodyAlpha  ?? 0.3;
+  const ha = style.hubAlpha   ?? 1;
+  const pa = style.propAlpha  ?? 0.25;
+  const bla = style.bladeAlpha ?? 0.5;
+  const dashed = style.dashed || false;
+
+  function xf(p) {
+    let pt = qRot(q, p);
+    pt = [pt[0] + worldPos[0], pt[1] + worldPos[1], pt[2] + worldPos[2]];
+    return camera.xf(pt);
+  }
+
+  function proj(p) {
+    return camera.proj(p);
+  }
+
+  const motors = [
+    { p: [-ARM, 0,  ARM], front: true },
+    { p: [ ARM, 0,  ARM], front: true },
+    { p: [-ARM, 0, -ARM], front: false },
+    { p: [ ARM, 0, -ARM], front: false },
+  ];
+
+  const tCenter = proj(xf([0, 0, 0]));
+  const tMotors = motors.map(m => ({ ...m, proj: proj(xf(m.p)) }));
+  const sorted = [...tMotors].sort((a, b) => b.proj.z - a.proj.z);
+
+  // Ground shadow
+  if (style.shadow) {
+    const sPts = motors.map(m => {
+      let pt = qRot(q, m.p);
+      pt = [pt[0] + worldPos[0], 0, pt[2] + worldPos[2]]; // project to y=0 ground
+      return proj(camera.xf(pt));
+    });
+    ctx.beginPath();
+    ctx.moveTo(sPts[0].x, sPts[0].y);
+    ctx.lineTo(sPts[1].x, sPts[1].y);
+    ctx.lineTo(sPts[3].x, sPts[3].y);
+    ctx.lineTo(sPts[2].x, sPts[2].y);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fill();
+  }
+
+  if (dashed) ctx.setLineDash([4, 4]);
+
+  // Arms and props
+  for (const motor of sorted) {
+    const mp = motor.proj;
+    const c = motor.front ? fc : bc;
+
+    // Arm
+    ctx.beginPath();
+    ctx.moveTo(tCenter.x, tCenter.y);
+    ctx.lineTo(mp.x, mp.y);
+    ctx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${aa})`;
+    ctx.lineWidth = Math.max(2, 3.5 * (mp.s / 50));
+    ctx.stroke();
+
+    // Prop disc
+    const propR = PROP_RADIUS * mp.s;
+    ctx.beginPath();
+    ctx.arc(mp.x, mp.y, propR, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},0.06)`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${pa})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Spinning blades
+    const spinSpeed = 0.5 + Math.max(0, throttle) * 1.5;
+    const propAngle = now / 1000 * spinSpeed * Math.PI * 8;
+    const bladeOff = motor.front ? 0 : Math.PI / 4;
+    for (let b = 0; b < 2; b++) {
+      const angle = propAngle + bladeOff + b * Math.PI;
+      const bx = Math.cos(angle) * propR * 0.9;
+      const by = Math.sin(angle) * propR * 0.9;
+      ctx.beginPath();
+      ctx.moveTo(mp.x + bx, mp.y + by);
+      ctx.lineTo(mp.x - bx, mp.y - by);
+      ctx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${bla})`;
+      ctx.lineWidth = Math.max(1.5, 2.5 * (mp.s / 50));
+      ctx.stroke();
+    }
+
+    // Motor hub
+    ctx.beginPath();
+    ctx.arc(mp.x, mp.y, Math.max(2, 3 * (mp.s / 50)), 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${ha})`;
+    ctx.fill();
+  }
+
+  if (dashed) ctx.setLineDash([]);
+
+  // Center body plate
+  const bs = 0.22;
+  const bodyPts = [[-bs,0.02,bs],[bs,0.02,bs],[bs,0.02,-bs],[-bs,0.02,-bs]].map(p => proj(xf(p)));
+  ctx.beginPath();
+  ctx.moveTo(bodyPts[0].x, bodyPts[0].y);
+  for (let i = 1; i < 4; i++) ctx.lineTo(bodyPts[i].x, bodyPts[i].y);
+  ctx.closePath();
+  ctx.fillStyle = `rgba(200,200,220,${ba})`;
+  ctx.fill();
+  ctx.strokeStyle = `rgba(200,200,220,${ba + 0.2})`;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Forward triangle
+  const fT = proj(xf([0, 0.04, ARM * 0.35]));
+  const fL = proj(xf([-0.12, 0.04, ARM * 0.15]));
+  const fR = proj(xf([0.12, 0.04, ARM * 0.15]));
+  ctx.beginPath();
+  ctx.moveTo(fT.x, fT.y);
+  ctx.lineTo(fL.x, fL.y);
+  ctx.lineTo(fR.x, fR.y);
+  ctx.closePath();
+  ctx.fillStyle = `rgba(${fc[0]},${fc[1]},${fc[2]},${ba + 0.1})`;
+  ctx.fill();
+
+  // Rear dot
+  const rDot = proj(xf([0, 0.04, -ARM * 0.25]));
+  ctx.beginPath();
+  ctx.arc(rDot.x, rDot.y, Math.max(2, 2.5 * (rDot.s / 50)), 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(${bc[0]},${bc[1]},${bc[2]},${ba + 0.1})`;
+  ctx.fill();
+}
+
+// --- Ground grid, trail, and ghost path rendering ---
+function drawGroundGrid(ctx, camera, pathData) {
+  const { minP, maxP } = pathData;
+  const pad = 3;
+  const gridMin = [Math.floor(minP[0] - pad), Math.floor(minP[2] - pad)];
+  const gridMax = [Math.ceil(maxP[0] + pad), Math.ceil(maxP[2] + pad)];
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 0.5;
+
+  // X-parallel lines (along Z)
+  for (let x = gridMin[0]; x <= gridMax[0]; x++) {
+    const p1 = camera.proj(camera.xf([x, 0, gridMin[1]]));
+    const p2 = camera.proj(camera.xf([x, 0, gridMax[1]]));
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+  }
+  // Z-parallel lines (along X)
+  for (let z = gridMin[1]; z <= gridMax[1]; z++) {
+    const p1 = camera.proj(camera.xf([gridMin[0], 0, z]));
+    const p2 = camera.proj(camera.xf([gridMax[0], 0, z]));
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+  }
+}
+
+function drawTrail(ctx, pathData, currentTime, camera) {
+  const pts = pathData.points;
+  let started = false;
+
+  for (let i = 0; i < pts.length; i++) {
+    if (pts[i].t > currentTime) break;
+    const vp = camera.xf(pts[i].pos);
+    const sp = camera.proj(vp);
+    const progress = currentTime > 0 ? pts[i].t / currentTime : 0;
+    const alpha = 0.1 + progress * 0.6;
+    const lw = Math.max(0.8, 2.5 * (sp.s / 50));
+
+    if (!started) {
+      ctx.beginPath();
+      ctx.moveTo(sp.x, sp.y);
+      started = true;
+    } else {
+      ctx.strokeStyle = `rgba(108,92,231,${alpha})`;
+      ctx.lineWidth = lw;
+      ctx.lineTo(sp.x, sp.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(sp.x, sp.y);
+    }
+  }
+}
+
+function drawFullPathGhost(ctx, pathData, currentTime, camera) {
+  ctx.setLineDash([3, 5]);
+  ctx.strokeStyle = 'rgba(108,92,231,0.1)';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  let started = false;
+  for (let i = 0; i < pathData.points.length; i++) {
+    const pt = pathData.points[i];
+    if (pt.t < currentTime) continue;
+    const sp = camera.proj(camera.xf(pt.pos));
+    if (!started) { ctx.moveTo(sp.x, sp.y); started = true; }
+    else ctx.lineTo(sp.x, sp.y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// --- Main 3D draw: ghost target + solid user quad ---
+function drawQuad3D(canvasId, trick, time, throttle, now, userQuat) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Compute flight path and camera
+  const pathData = computeTrickPath(trick);
+  const frame = computeAutoFrame(pathData, w, h);
+  const camera = makeCamera(frame, w, h);
+
+  // Draw ground grid
+  if (state.showGrid) drawGroundGrid(ctx, camera, pathData);
+
+  // Draw future path ghost
+  drawFullPathGhost(ctx, pathData, time, camera);
+
+  // Draw trail up to current time
+  drawTrail(ctx, pathData, time, camera);
+
+  // Get current world position
+  const currentState = interpolatePathPosition(pathData, time);
+  const worldPos = currentState.pos;
+
+  // Ghost target quad (corrected orientation from computeQuatRotation)
+  const qTarget = computeQuatRotation(trick, time);
+  const showGhost = state.settings.showGhost;
+  if (showGhost || !userQuat) {
+    const ghostStyle = userQuat ? {
+      frontColor: [108, 92, 231], backColor: [108, 92, 231],
+      armAlpha: 0.35, bodyAlpha: 0.12, hubAlpha: 0.5,
+      propAlpha: 0.12, bladeAlpha: 0.2,
+      dashed: true, shadow: true,
+    } : {
+      frontColor: [255, 120, 80], backColor: [100, 160, 255],
+      armAlpha: 0.7, bodyAlpha: 0.3, hubAlpha: 1,
+      propAlpha: 0.25, bladeAlpha: 0.5,
+      dashed: false, shadow: true,
+    };
+    drawOneQuad(ctx, qTarget, worldPos, throttle, now, ghostStyle, camera);
+  }
+
+  // User's solid quad
+  if (userQuat) {
+    const qFinal = getTrickFinalQuat(trick);
+    const qCorr = qConj(qFinal);
+    const maxT = trick.motion[trick.motion.length - 1].t;
+    const prog = maxT > 0 ? Math.min(time / maxT, 1) : 0;
+    const weighted = (1 - Math.cos(Math.PI * prog)) / 2;
+    const correctedUserQuat = qNorm(qMul(userQuat, qSlerp(qI(), qCorr, weighted)));
+    drawOneQuad(ctx, correctedUserQuat, worldPos, throttle, now, {
+      frontColor: [0, 230, 118], backColor: [0, 180, 255],
+      armAlpha: 0.8, bodyAlpha: 0.35, hubAlpha: 1,
+      propAlpha: 0.3, bladeAlpha: 0.55,
+      dashed: false, shadow: false,
+    }, camera);
+  }
+}
+
+// --- Viewport toolbar handlers ---
+function setCamPreset(yaw, tilt) {
+  state.camOrbitX = yaw - VIEW_YAW;
+  state.camOrbitY = tilt - VIEW_TILT;
+}
+
+function resetCamView() {
+  state.camOrbitX = 0;
+  state.camOrbitY = 0;
+  state.camZoom = 1.0;
+}
+
+function camZoomStep(dir) {
+  const factor = dir > 0 ? 1.25 : 0.8;
+  state.camZoom = Math.max(0.3, Math.min(4.0, state.camZoom * factor));
+}
+
+function toggleGrid() {
+  state.showGrid = !state.showGrid;
+  const btn = document.getElementById('gridToggle');
+  if (btn) btn.classList.toggle('active', state.showGrid);
+}
+
+// --- Axis orientation gizmo ---
+function drawAxisGizmo() {
+  const canvas = document.getElementById('axisGizmo');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const cx = w / 2, cy = h / 2;
+  ctx.clearRect(0, 0, w, h);
+
+  const tilt = VIEW_TILT + state.camOrbitY;
+  const yaw = VIEW_YAW + state.camOrbitX;
+  const len = 20;
+
+  const axes = [
+    { dir: [1, 0, 0], color: '#e74c3c', label: 'X' },
+    { dir: [0, 1, 0], color: '#2ecc71', label: 'Y' },
+    { dir: [0, 0, 1], color: '#3498db', label: 'Z' },
+  ];
+
+  // Transform each axis through camera rotation
+  const projected = axes.map(a => {
+    let p = rotX(a.dir, tilt);
+    p = rotY(p, yaw);
+    return { ...a, sx: cx + p[0] * len, sy: cy - p[1] * len, z: p[2] };
+  });
+
+  // Sort back-to-front
+  projected.sort((a, b) => a.z - b.z);
+
+  for (const ax of projected) {
+    const alpha = ax.z > 0 ? 1.0 : 0.3;
+    // Line
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(ax.sx, ax.sy);
+    ctx.strokeStyle = ax.color;
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Endpoint dot
+    ctx.beginPath();
+    ctx.arc(ax.sx, ax.sy, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = ax.color;
+    ctx.fill();
+    // Label
+    const labelOff = 6;
+    const dx = ax.sx - cx, dy = ax.sy - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const lx = ax.sx + (dx / dist) * labelOff;
+    const ly = ax.sy + (dy / dist) * labelOff;
+    ctx.font = '600 9px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = ax.color;
+    ctx.fillText(ax.label, lx, ly);
+  }
+  ctx.globalAlpha = 1;
+  // Center dot
+  ctx.beginPath();
+  ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fill();
+}
+
+// --- 3D canvas mouse drag for camera orbit ---
+(function setupCamDrag() {
+  const ORBIT_SENSITIVITY = 0.006;
+  document.addEventListener('mousedown', e => {
+    const canvas = e.target.closest('#quad3dCanvas');
+    if (!canvas) return;
+    state.camDragging = true;
+    state.camDragStart = { x: e.clientX, y: e.clientY };
+    state.camOrbitStartX = state.camOrbitX;
+    state.camOrbitStartY = state.camOrbitY;
+    canvas.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!state.camDragging) return;
+    const dx = e.clientX - state.camDragStart.x;
+    const dy = e.clientY - state.camDragStart.y;
+    state.camOrbitX = state.camOrbitStartX + dx * ORBIT_SENSITIVITY;
+    state.camOrbitY = state.camOrbitStartY - dy * ORBIT_SENSITIVITY;
+    // Clamp vertical to avoid flipping
+    state.camOrbitY = Math.max(-1.2, Math.min(1.2, state.camOrbitY));
+  });
+  document.addEventListener('mouseup', () => {
+    if (!state.camDragging) return;
+    state.camDragging = false;
+    const canvas = document.getElementById('quad3dCanvas');
+    if (canvas) canvas.style.cursor = 'grab';
+  });
+  // Scroll wheel to zoom
+  document.addEventListener('wheel', e => {
+    if (!e.target.closest('#quad3dCanvas')) return;
+    e.preventDefault();
+    const zoomFactor = e.deltaY > 0 ? 1.08 : 0.92;
+    state.camZoom = Math.max(0.3, Math.min(4.0, state.camZoom * zoomFactor));
+  }, { passive: false });
+  // Double-click to reset camera
+  document.addEventListener('dblclick', e => {
+    if (!e.target.closest('#quad3dCanvas')) return;
+    state.camOrbitX = 0;
+    state.camOrbitY = 0;
+    state.camZoom = 1.0;
+  });
+  // Touch support for mobile camera drag
+  let touchStartDist = 0;
+  document.addEventListener('touchstart', e => {
+    const canvas = e.target.closest('#quad3dCanvas');
+    if (!canvas) return;
+    if (e.touches.length === 1) {
+      state.camDragging = true;
+      state.camDragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      state.camOrbitStartX = state.camOrbitX;
+      state.camOrbitStartY = state.camOrbitY;
+      e.preventDefault();
+    } else if (e.touches.length === 2) {
+      // Pinch zoom start
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      touchStartDist = Math.sqrt(dx*dx + dy*dy);
+      e.preventDefault();
+    }
+  }, { passive: false });
+  document.addEventListener('touchmove', e => {
+    if (!e.target.closest('#quad3dCanvas') && !state.camDragging) return;
+    if (e.touches.length === 1 && state.camDragging) {
+      const dx = e.touches[0].clientX - state.camDragStart.x;
+      const dy = e.touches[0].clientY - state.camDragStart.y;
+      state.camOrbitX = state.camOrbitStartX + dx * ORBIT_SENSITIVITY;
+      state.camOrbitY = state.camOrbitStartY - dy * ORBIT_SENSITIVITY;
+      state.camOrbitY = Math.max(-1.2, Math.min(1.2, state.camOrbitY));
+      e.preventDefault();
+    } else if (e.touches.length === 2 && touchStartDist > 0) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const scale = dist / touchStartDist;
+      state.camZoom = Math.max(0.3, Math.min(4.0, state.camZoom / scale));
+      touchStartDist = dist;
+      e.preventDefault();
+    }
+  }, { passive: false });
+  document.addEventListener('touchend', () => {
+    state.camDragging = false;
+    touchStartDist = 0;
+  });
+})();
+
+// ============================================================
+// CANVAS RENDERING
+// ============================================================
+function drawStick(canvasId, targetX, targetY, actualX, actualY, showTarget) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+  const radius = w * 0.38;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Background circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Crosshairs
+  ctx.beginPath();
+  ctx.moveTo(cx - radius, cy);
+  ctx.lineTo(cx + radius, cy);
+  ctx.moveTo(cx, cy - radius);
+  ctx.lineTo(cx, cy + radius);
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Calculate positions (clamp to circle)
+  const tPosX = cx + targetX * radius;
+  const tPosY = cy + targetY * radius;
+  const aPosX = cx + actualX * radius;
+  const aPosY = cy + actualY * radius;
+
+  // Distance for color feedback
+  const dist = Math.sqrt((targetX - actualX) ** 2 + (targetY - actualY) ** 2);
+  let feedbackColor;
+  if (dist < 0.2) feedbackColor = 'var(--green)';
+  else if (dist < 0.5) feedbackColor = 'var(--yellow)';
+  else feedbackColor = 'var(--red)';
+
+  // Draw target (pulsing ring)
+  if (showTarget) {
+    const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 200);
+    const targetAlpha = 0.3 + pulse * 0.4;
+    ctx.beginPath();
+    ctx.arc(tPosX, tPosY, 14 + pulse * 4, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(108, 92, 231, ${targetAlpha})`;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Target center dot
+    ctx.beginPath();
+    ctx.arc(tPosX, tPosY, 4, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(108, 92, 231, 0.8)`;
+    ctx.fill();
+
+    // Line from actual to target
+    if (state.gamepadIndex !== null) {
+      ctx.beginPath();
+      ctx.moveTo(aPosX, aPosY);
+      ctx.lineTo(tPosX, tPosY);
+      ctx.strokeStyle = `rgba(255,255,255,0.1)`;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // Draw actual position (solid dot)
+  if (state.gamepadIndex !== null) {
+    ctx.beginPath();
+    ctx.arc(aPosX, aPosY, 10, 0, Math.PI * 2);
+    const computedColor = showTarget ? feedbackColor : 'var(--text-primary)';
+    ctx.fillStyle = computedColor;
+    ctx.fill();
+
+    // Glow
+    ctx.beginPath();
+    ctx.arc(aPosX, aPosY, 16, 0, Math.PI * 2);
+    ctx.fillStyle = showTarget ?
+      (dist < 0.2 ? 'rgba(0,230,118,0.15)' : dist < 0.5 ? 'rgba(255,214,0,0.15)' : 'rgba(255,82,82,0.15)') :
+      'rgba(255,255,255,0.08)';
+    ctx.fill();
+  }
+
+  return dist;
+}
+
+// ============================================================
+// MAIN LOOP
+// ============================================================
+function mainLoop(now) {
+  requestAnimationFrame(mainLoop);
+  pollGamepad();
+
+  const trick = state.selectedTrick;
+  if (!trick) return;
+
+  const motion = trick.motion;
+  const maxT = motion[motion.length - 1].t;
+
+  // Update playback time
+  if (state.playing && state.lastFrameTime !== null) {
+    const delta = (now - state.lastFrameTime) / 1000 * state.playbackSpeed;
+    state.playbackTime += delta;
+    if (state.playbackTime >= maxT) {
+      // Save best score for completed loop
+      if (state.accuracySamples.length > 0) {
+        const avg = state.accuracySamples.reduce((a, b) => a + b, 0) / state.accuracySamples.length;
+        const score = Math.round(avg);
+        updateBestScore(trick, score);
+        const bestEl = document.getElementById('bestScore');
+        if (bestEl) {
+          const prog = getTrickProgress(trick);
+          bestEl.textContent = prog.bestScore ? 'Best: ' + prog.bestScore + '%' : '';
+        }
+      }
+      if (state.settings.loop) {
+        // Loop: reset to beginning
+        state.playbackTime = 0;
+        state.accuracySamples = [];
+        state.currentAccuracy = 0;
+        state.userQuat = qI();
+      } else {
+        // Stop at end
+        state.playbackTime = maxT;
+        state.playing = false;
+        const btn = document.getElementById('playBtn');
+        if (btn) { btn.classList.remove('playing'); btn.innerHTML = '&#9654;'; }
+      }
+    }
+  }
+
+  // Accumulate user quaternion from live gamepad input (before lastFrameTime update)
+  const actualYaw = state.gamepadAxes[0];
+  const actualThrottle = state.gamepadAxes[1];
+  const actualRoll = state.gamepadAxes[2];
+  const actualPitch = state.gamepadAxes[3];
+  if (state.playing && state.gamepadIndex !== null && state.lastFrameTime !== null) {
+    if (!state.userQuat) state.userQuat = qI();
+    const udt = (now - state.lastFrameTime) / 1000 * state.playbackSpeed;
+    if (actualRoll)  state.userQuat = qMul(state.userQuat, qFromAA(0, 0, 1, -actualRoll  * udt * RATE_SCALE));
+    if (actualPitch) state.userQuat = qMul(state.userQuat, qFromAA(1, 0, 0, -actualPitch * udt * RATE_SCALE));
+    if (actualYaw)   state.userQuat = qMul(state.userQuat, qFromAA(0, 1, 0,  actualYaw   * udt * RATE_SCALE));
+    state.userQuat = qNorm(state.userQuat);
+  }
+
+  state.lastFrameTime = now;
+
+  // Interpolate target
+  const target = interpolateMotion(motion, state.playbackTime);
+  const showTarget = state.playing || state.playbackTime > 0;
+
+  // Apply display inversion (flips both target + actual on the stick visualizers)
+  const di = state.displayInvert;
+  const tY = (di.throttle ? 1 : -1) * target.throttle;
+  const yX = (di.yaw ? -1 : 1) * target.yaw;
+  const pY = (di.pitch ? 1 : -1) * target.pitch;
+  const rX = (di.roll ? -1 : 1) * target.roll;
+  const atY = (di.throttle ? 1 : -1) * actualThrottle;
+  const ayX = (di.yaw ? -1 : 1) * actualYaw;
+  const apY = (di.pitch ? 1 : -1) * actualPitch;
+  const arX = (di.roll ? -1 : 1) * actualRoll;
+
+  const distL = drawStick('leftStickCanvas', yX, tY, ayX, atY, showTarget);
+  const distR = drawStick('rightStickCanvas', rX, pY, arX, apY, showTarget);
+
+  // Draw 3D quad visualization (target ghost + user solid)
+  const userQ = (state.playing || state.playbackTime > 0) && state.gamepadIndex !== null ? state.userQuat : null;
+  drawQuad3D('quad3dCanvas', trick, state.playbackTime, target.throttle, now, userQ);
+  drawAxisGizmo();
+
+  // Accuracy
+  if (showTarget && state.gamepadIndex !== null) {
+    const avgDist = ((distL || 0) + (distR || 0)) / 2;
+    const accuracy = Math.max(0, Math.round((1 - avgDist) * 100));
+    state.currentAccuracy = accuracy;
+
+    if (state.playing) {
+      state.accuracySamples.push(accuracy);
+    }
+
+    const accEl = document.getElementById('accuracyValue');
+    if (accEl) {
+      accEl.textContent = accuracy + '%';
+      if (accuracy >= 80) accEl.style.color = 'var(--green)';
+      else if (accuracy >= 50) accEl.style.color = 'var(--yellow)';
+      else accEl.style.color = 'var(--red)';
+    }
+  }
+
+  // Timeline
+  const fillEl = document.getElementById('timelineFill');
+  if (fillEl && maxT > 0) {
+    fillEl.style.width = (state.playbackTime / maxT * 100) + '%';
+  }
+
+  // Time display
+  const timeEl = document.getElementById('timeDisplay');
+  if (timeEl) {
+    timeEl.textContent = state.playbackTime.toFixed(2) + ' / ' + maxT.toFixed(2) + 's';
+  }
+}
+
+// ============================================================
+// FILTER EVENTS
+// ============================================================
+document.getElementById('searchInput').addEventListener('input', e => {
+  state.searchQuery = e.target.value;
+  renderSidebar();
+});
+
+document.getElementById('diffFilters').addEventListener('click', e => {
+  const btn = e.target.closest('.diff-btn');
+  if (!btn) return;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.difficultyFilter = btn.dataset.diff;
+  renderSidebar();
+});
+
+// ============================================================
+// CALIBRATION UI
+// ============================================================
+const FUNCTIONS = ['throttle', 'yaw', 'pitch', 'roll'];
+const FN_LABELS = { throttle: 'Throttle', yaw: 'Yaw', pitch: 'Pitch', roll: 'Roll' };
+const FN_STICKS = { throttle: 'Left Y', yaw: 'Left X', pitch: 'Right Y', roll: 'Right X' };
+
+function openCalibration() {
+  state.calOpen = true;
+  document.getElementById('calOverlay').classList.add('open');
+  renderCalMappings();
+  document.getElementById('calDeadzone').value = state.calibration.deadzone;
+  document.getElementById('calDeadzoneVal').textContent = state.calibration.deadzone.toFixed(2);
+  calPollLoop();
+}
+
+function closeCalibration() {
+  state.calOpen = false;
+  document.getElementById('calOverlay').classList.remove('open');
+}
+
+function renderCalMappings() {
+  const container = document.getElementById('calMappings');
+  const numAxes = Math.max(state.gamepadRawAxes.length, 4);
+  let html = '';
+  for (const fn of FUNCTIONS) {
+    const axisKey = fn + 'Axis';
+    const invertKey = fn + 'Invert';
+    const currentAxis = state.calibration[axisKey];
+    const currentInvert = state.calibration[invertKey];
+
+    let options = '';
+    for (let i = 0; i < numAxes; i++) {
+      options += `<option value="${i}"${i === currentAxis ? ' selected' : ''}>Axis ${i}</option>`;
+    }
+
+    html += `<div class="cal-mapping-row">
+      <div class="cal-fn-name">${FN_LABELS[fn]}<small>${FN_STICKS[fn]}</small></div>
+      <select class="cal-select" data-fn="${fn}" data-key="${axisKey}">${options}</select>
+      <label class="cal-invert"><input type="checkbox" data-fn="${fn}" data-key="${invertKey}"${currentInvert ? ' checked' : ''}> Invert</label>
+    </div>`;
+  }
+  container.innerHTML = html;
+
+  container.querySelectorAll('.cal-select').forEach(sel => {
+    sel.addEventListener('change', e => {
+      state.calibration[e.target.dataset.key] = parseInt(e.target.value);
+    });
+  });
+  container.querySelectorAll('.cal-invert input').forEach(cb => {
+    cb.addEventListener('change', e => {
+      state.calibration[e.target.dataset.key] = e.target.checked;
+    });
+  });
+}
+
+function calPollLoop() {
+  if (!state.calOpen) return;
+  requestAnimationFrame(calPollLoop);
+
+  // Update live axis display
+  const container = document.getElementById('calAxesLive');
+  const raw = state.gamepadRawAxes;
+  if (raw.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-secondary);font-size:13px;grid-column:1/-1">Connect a controller and move sticks to see axes</div>';
+    return;
+  }
+
+  let html = '';
+  for (let i = 0; i < raw.length; i++) {
+    const val = raw[i];
+    const active = Math.abs(val) > 0.15;
+    html += `<div class="cal-axis-live" style="${active ? 'border:1px solid var(--accent)' : ''}">
+      <div class="cal-axis-idx">Axis ${i}</div>
+      <div class="cal-axis-val" style="color:${active ? 'var(--text-primary)' : 'var(--text-secondary)'}">${val.toFixed(2)}</div>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+document.getElementById('openCalBtn').addEventListener('click', openCalibration);
+document.getElementById('calOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) { saveCalibration(); closeCalibration(); }
+});
+document.getElementById('calSaveBtn').addEventListener('click', () => {
+  saveCalibration();
+  closeCalibration();
+});
+document.getElementById('calResetBtn').addEventListener('click', () => {
+  state.calibration = { ...DEFAULT_CAL };
+  saveCalibration();
+  renderCalMappings();
+  document.getElementById('calDeadzone').value = state.calibration.deadzone;
+  document.getElementById('calDeadzoneVal').textContent = state.calibration.deadzone.toFixed(2);
+});
+document.getElementById('calDeadzone').addEventListener('input', e => {
+  state.calibration.deadzone = parseFloat(e.target.value);
+  document.getElementById('calDeadzoneVal').textContent = state.calibration.deadzone.toFixed(2);
+});
+
+// ============================================================
+// SETTINGS UI
+// ============================================================
+document.getElementById('settingsBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  document.getElementById('settingsPanel').classList.toggle('open');
+});
+
+// Close settings when clicking outside
+document.addEventListener('click', e => {
+  const panel = document.getElementById('settingsPanel');
+  if (panel.classList.contains('open') && !e.target.closest('.settings-wrap')) {
+    panel.classList.remove('open');
+  }
+});
+
+// Sync toggle checkboxes from saved state on load
+function syncSettingsUI() {
+  document.querySelectorAll('[data-setting]').forEach(input => {
+    input.checked = !!state.settings[input.dataset.setting];
+  });
+}
+
+// Handle toggle changes
+document.getElementById('settingsPanel').addEventListener('change', e => {
+  const input = e.target.closest('[data-setting]');
+  if (!input) return;
+  state.settings[input.dataset.setting] = input.checked;
+  saveSettings();
+  // Re-render if visibility settings changed
+  if (['showSticks', 'showAccuracy'].includes(input.dataset.setting)) {
+    renderTrickDetail();
+  }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+syncSettingsUI();
+renderSidebar();
+requestAnimationFrame(mainLoop);
+</script>
+</body>
+</html>
