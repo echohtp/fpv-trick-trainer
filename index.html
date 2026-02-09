@@ -2601,20 +2601,21 @@ function computeTrickPath(trick) {
   const zDrift = closedLoop ? finalRaw[2] : 0;
 
   // Detect "level" tricks (pure rotations that should stay at constant altitude):
-  // first and last keyframe have same throttle, no pitch input throughout
-  const firstKf = motion[0], lastKf = motion[motion.length - 1];
+  // no pitch input throughout, and first/last keyframe have same throttle
   const hasPitch = motion.some(kf => Math.abs(kf.pitch) > 0.01);
   const isLevelTrick = !isOrbit && !isKinematicFwd && !hasPitch &&
-    Math.abs(firstKf.throttle - lastKf.throttle) < 0.01;
+    Math.abs(motion[0].throttle - motion[motion.length - 1].throttle) < 0.01;
 
   const points = [];
   for (const s of rawSamples) {
     const p = s.t / maxT;
-    // Level tricks use linear correction for flat path; others use sine-weighted
-    const corrW = isLevelTrick ? p : (1 - Math.cos(Math.PI * p)) / 2;
+    const corrW = (1 - Math.cos(Math.PI * p)) / 2;
     points.push({
       t: s.t,
-      pos: [s.pos[0] - xDrift * corrW, s.pos[1] - yDrift * corrW, s.pos[2] - zDrift * corrW],
+      // Level tricks (rolls, yaw spins): flatten Y so path stays level
+      pos: isLevelTrick
+        ? [s.pos[0] - xDrift * corrW, 0, s.pos[2] - zDrift * corrW]
+        : [s.pos[0] - xDrift * corrW, s.pos[1] - yDrift * corrW, s.pos[2] - zDrift * corrW],
       quat: s.quat
     });
   }
