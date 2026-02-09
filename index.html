@@ -2612,9 +2612,9 @@ function computeTrickPath(trick) {
     const corrW = (1 - Math.cos(Math.PI * p)) / 2;
     points.push({
       t: s.t,
-      // Level tricks (rolls, yaw spins): flatten Y so path stays level
+      // Level tricks (rolls, yaw spins): pin position so quad rotates in place
       pos: isLevelTrick
-        ? [s.pos[0] - xDrift * corrW, 0, s.pos[2] - zDrift * corrW]
+        ? [0, 0, 0]
         : [s.pos[0] - xDrift * corrW, s.pos[1] - yDrift * corrW, s.pos[2] - zDrift * corrW],
       quat: s.quat
     });
